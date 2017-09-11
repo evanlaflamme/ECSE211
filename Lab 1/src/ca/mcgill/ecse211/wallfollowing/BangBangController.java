@@ -26,6 +26,18 @@ public class BangBangController implements UltrasonicController {
   public void processUSData(int distance) {
     this.distance = distance;
     // TODO: process a movement based on the us distance passed in (BANG-BANG style)
+    if(distance < 10){
+    	WallFollowingLab.leftMotor.setSpeed(motorHigh);
+        WallFollowingLab.rightMotor.setSpeed(motorLow);
+        WallFollowingLab.leftMotor.forward();
+        WallFollowingLab.rightMotor.forward();
+    }
+    else if(distance > 30){
+    	WallFollowingLab.leftMotor.setSpeed(motorLow);
+        WallFollowingLab.rightMotor.setSpeed(motorHigh);
+        WallFollowingLab.leftMotor.forward();
+        WallFollowingLab.rightMotor.forward();
+    }
   }
 
   @Override
