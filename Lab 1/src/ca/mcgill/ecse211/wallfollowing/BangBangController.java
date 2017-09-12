@@ -43,7 +43,7 @@ public class BangBangController implements UltrasonicController {
     }
     
     if (distance < bandCenter - bandWidth){ //If too close to wall
-    	WallFollowingLab.leftMotor.setSpeed(motorHigh);
+    	WallFollowingLab.leftMotor.setSpeed(motorHigh * 2); // double the turning when close
         WallFollowingLab.rightMotor.setSpeed(motorLow);
         WallFollowingLab.leftMotor.forward();
         WallFollowingLab.rightMotor.forward();
