@@ -48,6 +48,28 @@ public class PController implements UltrasonicController {
     }
 
     // TODO: process a movement based on the us distance passed in (P style)
+    if (distance - bandCenter > bandWidth) { //Too far
+    	int diff = distance - bandCenter;
+    	int adj = diff * 2;
+    			
+    	WallFollowingLab.leftMotor.setSpeed(MOTOR_SPEED - adj);
+        WallFollowingLab.rightMotor.setSpeed(MOTOR_SPEED + adj);
+        WallFollowingLab.leftMotor.forward();
+        WallFollowingLab.rightMotor.forward();
+    } else if (distance - bandCenter < bandWidth) { //Too close
+    	int diff = distance - bandCenter; //Will be negative
+    	int adj = diff * 2;
+		
+    	WallFollowingLab.leftMotor.setSpeed(MOTOR_SPEED - adj); //Subtract negative (increase)
+        WallFollowingLab.rightMotor.setSpeed(MOTOR_SPEED + adj); //Add negative (decrease)
+        WallFollowingLab.leftMotor.forward();
+        WallFollowingLab.rightMotor.forward();
+    } else { //Within band
+    	WallFollowingLab.leftMotor.setSpeed(MOTOR_SPEED);
+        WallFollowingLab.rightMotor.setSpeed(MOTOR_SPEED);
+        WallFollowingLab.leftMotor.forward();
+        WallFollowingLab.rightMotor.forward();
+    }
   }
 
 
