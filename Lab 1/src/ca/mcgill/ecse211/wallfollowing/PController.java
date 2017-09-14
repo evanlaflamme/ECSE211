@@ -6,8 +6,8 @@ import lejos.hardware.motor.EV3LargeRegulatedMotor;
 public class PController implements UltrasonicController {
 
   /* Constants */
-  private static final int MOTOR_SPEED = 150;
-  private static final int FILTER_OUT = 20;
+  private static final int MOTOR_SPEED = 170;
+  private static final int FILTER_OUT = 200;
 
   private final int bandCenter;
   private final int bandWidth;
@@ -52,35 +52,43 @@ public class PController implements UltrasonicController {
     int diff = distance - bandCenter;
 
     // TODO: process a movement based on the us distance passed in (P style)
-    
-    if (diff > bandWidth) { //Too far or too near
+       
 
+    if (Math.abs(diff) < 10) { //Not too far off
+    	delta = diff / 2;
+    }
+    else if (diff > bandWidth) { //Too far
     	delta = (diff * 3);
     }
-    
-    else if (diff < bandWidth) {
+    else if (diff < bandWidth){ //Too close
     	delta = (diff * 13);
-    }
-
-    else { //Within band
+    } else { //Within band
     	delta = 0;
     }
     
     //Add difference (will be pos if too far, neg if too close)
-    // set a threshold to aviod maximum motor output
-    if (delta >= 50){
-    	delta = 50;
-    }
-    else if(delta <= -130){
-    	delta = -130;
-
-    }
-    
-    	WallFollowingLab.leftMotor.setSpeed(java.lang.Math.abs(MOTOR_SPEED - delta));
-    	WallFollowingLab.rightMotor.setSpeed(java.lang.Math.abs(MOTOR_SPEED + delta));
+    // set a threshold to avoid maximum motor output
+    if (delta >= 70){ //Too far away
+    	delta = 70;
+    	
+    	WallFollowingLab.leftMotor.setSpeed(MOTOR_SPEED - (delta / 2));
+    	WallFollowingLab.rightMotor.setSpeed(MOTOR_SPEED + delta);
     	WallFollowingLab.leftMotor.forward();
     	WallFollowingLab.rightMotor.forward();
-    
+    }
+    else if(delta <= -210){ //Too close
+    	delta = -210;
+    	
+    	WallFollowingLab.leftMotor.setSpeed(MOTOR_SPEED - delta);
+    	WallFollowingLab.rightMotor.setSpeed(Math.abs(MOTOR_SPEED + delta));
+    	WallFollowingLab.leftMotor.forward();
+    	WallFollowingLab.rightMotor.backward();
+    } else {
+    	WallFollowingLab.leftMotor.setSpeed(MOTOR_SPEED - delta);
+    	WallFollowingLab.rightMotor.setSpeed(MOTOR_SPEED + delta);
+    	WallFollowingLab.leftMotor.forward();
+    	WallFollowingLab.rightMotor.forward();
+    }    
   }
   
 

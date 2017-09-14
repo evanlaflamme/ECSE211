@@ -4,7 +4,7 @@ import lejos.hardware.motor.*;
 
 public class BangBangController implements UltrasonicController {
 	
-  private static final int FILTER_OUT = 20;
+  private static final int FILTER_OUT = 200;
 	
   private final int bandCenter;
   private final int bandWidth;
@@ -42,11 +42,23 @@ public class BangBangController implements UltrasonicController {
       this.distance = distance;
     }
     
-    if (distance < bandCenter - bandWidth){ //If too close to wall
+    if (distance < 30){ //If really close to wall
     	WallFollowingLab.leftMotor.setSpeed((motorHigh * 5)/2); // double the turning when close
         WallFollowingLab.rightMotor.setSpeed(motorLow);
         WallFollowingLab.leftMotor.forward();
         WallFollowingLab.rightMotor.backward();
+    }
+    else if (distance < bandCenter - bandWidth) { //Too close
+    	WallFollowingLab.leftMotor.setSpeed(motorHigh);
+        WallFollowingLab.rightMotor.setSpeed(motorLow);
+        WallFollowingLab.leftMotor.forward();
+        WallFollowingLab.rightMotor.forward();
+    }
+    else if (distance > 150){
+    	WallFollowingLab.leftMotor.setSpeed((motorLow*4)/3);
+        WallFollowingLab.rightMotor.setSpeed(motorHigh);
+        WallFollowingLab.leftMotor.forward();
+        WallFollowingLab.rightMotor.forward();
     }
     else if (distance > bandCenter + bandWidth){ //If too far from wall
     	WallFollowingLab.leftMotor.setSpeed(motorLow);
