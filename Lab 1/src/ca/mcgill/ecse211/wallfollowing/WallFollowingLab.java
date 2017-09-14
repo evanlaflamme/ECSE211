@@ -11,10 +11,10 @@ public class WallFollowingLab {
 
   // Parameters: adjust these for desired performance
 
-  private static final int bandCenter = 45; // Offset from the wall (cm)
-  private static final int bandWidth = 3; // Width of dead band (cm)
-  private static final int motorLow = 50; // Speed of slower rotating wheel (deg/sec)
-  private static final int motorHigh = 250; // Speed of the faster rotating wheel (deg/seec)
+  private static final int bandCenter = 50; // Offset from the wall (cm)
+  private static final int bandWidth = 2; // Width of dead band (cm)
+  private static final int motorLow = 80; // Speed of slower rotating wheel (deg/sec)
+  private static final int motorHigh = 180; // Speed of the faster rotating wheel (deg/seec)
 
   private static final Port usPort = LocalEV3.get().getPort("S1");  
   public static final EV3LargeRegulatedMotor leftMotor =
