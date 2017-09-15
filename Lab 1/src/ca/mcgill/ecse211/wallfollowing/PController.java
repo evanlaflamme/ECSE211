@@ -7,7 +7,7 @@ public class PController implements UltrasonicController {
 
   /* Constants */
   private static final int MOTOR_SPEED = 175;
-  private static final int FILTER_OUT = 300;
+  private static final int FILTER_OUT = 400;
 
   private final int bandCenter;
   private final int bandWidth;
@@ -48,41 +48,45 @@ public class PController implements UltrasonicController {
       this.distance = distance;
     }
     
-    int delta;
-    int diff = distance - bandCenter ;
+    int delta = 0;
+    int diff = distance - bandCenter;      
 
-    // TODO: process a movement based on the us distance passed in (P style)
-       
-
-    if (diff > 2 * bandWidth) { //Too far
+    if (diff > bandWidth) { //Too far
+    	if (diff > 28) { //Really far
+    		delta = 65 + (500 / diff);
+    		
+    		//Wider turn
+    		WallFollowingLab.leftMotor.setSpeed(MOTOR_SPEED - (delta / 2));
+        	WallFollowingLab.rightMotor.setSpeed(MOTOR_SPEED + delta);
+        	WallFollowingLab.leftMotor.forward();
+        	WallFollowingLab.rightMotor.forward();
+        	return;
+    	}
+    	
     	delta = (diff * 3);
     }
-    else if (diff < 2 * bandWidth){ //Too close
+    else if (diff < bandWidth){ //Too close
+    	if (diff < -5) { //Really close
+    		delta = -140 + diff;
+    		
+    		//Change direction in place
+    		WallFollowingLab.leftMotor.setSpeed(delta);
+        	WallFollowingLab.rightMotor.setSpeed(Math.abs(delta));
+        	WallFollowingLab.leftMotor.forward();
+        	WallFollowingLab.rightMotor.backward();
+        	return;
+    	}
+    	
     	delta = (diff * 8);
     } 
     else { //Within band
     	delta = 0;
     }
     
-    //Add difference (will be pos if too far, neg if too close)
-    // set a threshold to avoid maximum motor output
-    if (delta >= 80){ //Too far away    	
-    	WallFollowingLab.leftMotor.setSpeed(MOTOR_SPEED -40);
-    	WallFollowingLab.rightMotor.setSpeed(MOTOR_SPEED + 80);
-    	WallFollowingLab.leftMotor.forward();
-    	WallFollowingLab.rightMotor.forward();
-    }
-    else if(delta <= -150){ //Too close    	
-    	WallFollowingLab.leftMotor.setSpeed(MOTOR_SPEED + 70);
-    	WallFollowingLab.rightMotor.setSpeed(MOTOR_SPEED + 70);
-    	WallFollowingLab.leftMotor.forward();
-    	WallFollowingLab.rightMotor.backward();
-    } else {
-    	WallFollowingLab.leftMotor.setSpeed(MOTOR_SPEED - delta);
-    	WallFollowingLab.rightMotor.setSpeed(MOTOR_SPEED + delta);
-    	WallFollowingLab.leftMotor.forward();
-    	WallFollowingLab.rightMotor.forward();
-    }    
+	WallFollowingLab.leftMotor.setSpeed(MOTOR_SPEED - delta);
+	WallFollowingLab.rightMotor.setSpeed(MOTOR_SPEED + delta);
+	WallFollowingLab.leftMotor.forward();
+	WallFollowingLab.rightMotor.forward();  
   }
   
 
