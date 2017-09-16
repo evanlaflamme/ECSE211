@@ -1,11 +1,9 @@
 package ca.mcgill.ecse211.wallfollowing;
 
-import lejos.hardware.motor.*;
-
 public class BangBangController implements UltrasonicController {
-	
+
   private static final int FILTER_OUT = 200;
-	
+
   private final int bandCenter;
   private final int bandWidth;
   private final int motorLow;
@@ -27,51 +25,51 @@ public class BangBangController implements UltrasonicController {
 
   @Override
   public void processUSData(int distance) {
-  if (distance >= 255 && filterControl < FILTER_OUT) {
-      // bad value, do not set the distance var, however do increment the
-      // filter value
+    if (distance >= 255 && filterControl < FILTER_OUT) {
+      // bad value, do not set the distance var, however do increment the filter value
       filterControl++;
     } else if (distance >= 255) {
-      // We have repeated large values, so there must actually be nothing
-      // there: leave the distance alone
+      // We have repeated large values, so there must actually be nothing there: leave the distance
+      // alone
       this.distance = distance;
     } else {
-      // distance went below 255: reset filter and leave
-      // distance alone.
+      // distance went below 255: reset filter and leave distance alone.
       filterControl = 0;
       this.distance = distance;
     }
-    
-    if (distance < 30){ //If really close to wall
-    	WallFollowingLab.leftMotor.setSpeed((motorHigh * 5)/2); // double the turning when close
+
+    int leftMotorSpeed = 0;
+    int rightMotorSpeed = 0;
+
+    if (distance < bandCenter - bandWidth) { // Robot is too close to wall
+      if (distance < 30) { // Robot is really close to wall
+        WallFollowingLab.leftMotor.setSpeed((motorHigh * 5) / 2); // Increase turning speed
         WallFollowingLab.rightMotor.setSpeed(motorLow);
         WallFollowingLab.leftMotor.forward();
-        WallFollowingLab.rightMotor.backward();
+        WallFollowingLab.rightMotor.backward(); // Reverse right wheel to turn faster
+        return;
+      }
+
+      leftMotorSpeed = motorHigh;
+      rightMotorSpeed = motorLow;
+    } else if (distance > bandCenter + bandWidth) { // If too far from wall
+      if (distance > 150) { // Really far from wall
+        leftMotorSpeed = (motorLow * 4) / 3; // Turn faster
+        rightMotorSpeed = motorHigh;
+      } else {
+        leftMotorSpeed = motorLow;
+        rightMotorSpeed = motorHigh;
+      }
+    } else { // Within range, so move forward
+      leftMotorSpeed = motorHigh;
+      rightMotorSpeed = motorHigh;
     }
-    else if (distance < bandCenter - bandWidth) { //Too close
-    	WallFollowingLab.leftMotor.setSpeed(motorHigh);
-        WallFollowingLab.rightMotor.setSpeed(motorLow);
-        WallFollowingLab.leftMotor.forward();
-        WallFollowingLab.rightMotor.forward();
-    }
-    else if (distance > 150){
-    	WallFollowingLab.leftMotor.setSpeed((motorLow*4)/3);
-        WallFollowingLab.rightMotor.setSpeed(motorHigh);
-        WallFollowingLab.leftMotor.forward();
-        WallFollowingLab.rightMotor.forward();
-    }
-    else if (distance > bandCenter + bandWidth){ //If too far from wall
-    	WallFollowingLab.leftMotor.setSpeed(motorLow);
-        WallFollowingLab.rightMotor.setSpeed(motorHigh);
-        WallFollowingLab.leftMotor.forward();
-        WallFollowingLab.rightMotor.forward();
-    }
-    else { //Within range, so move forward
-    	WallFollowingLab.leftMotor.setSpeed(motorHigh);
-        WallFollowingLab.rightMotor.setSpeed(motorHigh);
-        WallFollowingLab.leftMotor.forward();
-        WallFollowingLab.rightMotor.forward();
-    }
+
+    // Move robot forward
+    WallFollowingLab.leftMotor.setSpeed(leftMotorSpeed);
+    WallFollowingLab.rightMotor.setSpeed(rightMotorSpeed);
+    WallFollowingLab.leftMotor.forward();
+    WallFollowingLab.rightMotor.forward();
   }
 
   @Override
