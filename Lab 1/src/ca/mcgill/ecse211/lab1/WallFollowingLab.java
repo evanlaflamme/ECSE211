@@ -1,4 +1,4 @@
-package ca.mcgill.ecse211.wallfollowing;
+package ca.mcgill.ecse211.lab1;
 
 import lejos.hardware.sensor.*;
 import lejos.hardware.ev3.LocalEV3;
@@ -11,12 +11,12 @@ public class WallFollowingLab {
 
   // Parameters: adjust these for desired performance
 
-  private static final int bandCenter = 45; // Offset from the wall (cm)
-  private static final int bandWidth = 1; // Width of dead band (cm)
-  private static final int motorLow = 110; // Speed of slower rotating wheel (deg/sec)
-  private static final int motorHigh = 220; // Speed of the faster rotating wheel (deg/seec)
+  private static final int bandCenter = 53; // Offset from the wall (cm)
+  private static final int bandWidth = 3; // Width of dead band (cm)
+  private static final int motorLow = 120; // Speed of slower rotating wheel (deg/sec)
+  private static final int motorHigh = 200; // Speed of the faster rotating wheel (deg/seec)
 
-  private static final Port usPort = LocalEV3.get().getPort("S1");  
+  private static final Port usPort = LocalEV3.get().getPort("S1");
   public static final EV3LargeRegulatedMotor leftMotor =
       new EV3LargeRegulatedMotor(LocalEV3.get().getPort("A"));
   public static final EV3LargeRegulatedMotor rightMotor =

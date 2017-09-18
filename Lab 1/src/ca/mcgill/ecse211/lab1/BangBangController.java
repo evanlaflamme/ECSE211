@@ -1,8 +1,8 @@
-package ca.mcgill.ecse211.wallfollowing;
+package ca.mcgill.ecse211.lab1;
 
 public class BangBangController implements UltrasonicController {
 
-  private static final int FILTER_OUT = 200;
+  private static final int FILTER_OUT = 300;
 
   private final int bandCenter;
   private final int bandWidth;
@@ -25,15 +25,12 @@ public class BangBangController implements UltrasonicController {
 
   @Override
   public void processUSData(int distance) {
-    if (distance >= 255 && filterControl < FILTER_OUT) {
-      // bad value, do not set the distance var, however do increment the filter value
+    if (distance >= 150 && filterControl < FILTER_OUT) { // Large value, increment filter control
       filterControl++;
-    } else if (distance >= 255) {
-      // We have repeated large values, so there must actually be nothing there: leave the distance
-      // alone
+    } else if (distance >= 150) { // Repeated large values, leave distance alone
       this.distance = distance;
     } else {
-      // distance went below 255: reset filter and leave distance alone.
+      // distance went below 150: reset filter and leave distance alone.
       filterControl = 0;
       this.distance = distance;
     }
@@ -43,8 +40,8 @@ public class BangBangController implements UltrasonicController {
 
     if (distance < bandCenter - bandWidth) { // Robot is too close to wall
       if (distance < 30) { // Robot is really close to wall
-        WallFollowingLab.leftMotor.setSpeed((motorHigh * 5) / 2); // Increase turning speed
-        WallFollowingLab.rightMotor.setSpeed(motorLow);
+        WallFollowingLab.leftMotor.setSpeed(motorHigh);
+        WallFollowingLab.rightMotor.setSpeed(motorHigh);
         WallFollowingLab.leftMotor.forward();
         WallFollowingLab.rightMotor.backward(); // Reverse right wheel to turn faster
         return;
@@ -53,13 +50,8 @@ public class BangBangController implements UltrasonicController {
       leftMotorSpeed = motorHigh;
       rightMotorSpeed = motorLow;
     } else if (distance > bandCenter + bandWidth) { // If too far from wall
-      if (distance > 150) { // Really far from wall
-        leftMotorSpeed = (motorLow * 4) / 3; // Turn faster
-        rightMotorSpeed = motorHigh;
-      } else {
-        leftMotorSpeed = motorLow;
-        rightMotorSpeed = motorHigh;
-      }
+      leftMotorSpeed = motorLow;
+      rightMotorSpeed = motorHigh;
     } else { // Within range, so move forward
       leftMotorSpeed = motorHigh;
       rightMotorSpeed = motorHigh;

@@ -1,4 +1,4 @@
-package ca.mcgill.ecse211.wallfollowing;
+package ca.mcgill.ecse211.lab1;
 
 import lejos.hardware.Button;
 import lejos.hardware.ev3.LocalEV3;

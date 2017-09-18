@@ -1,4 +1,4 @@
-package ca.mcgill.ecse211.wallfollowing;
+package ca.mcgill.ecse211.lab1;
 
 public class PController implements UltrasonicController {
 
@@ -39,7 +39,7 @@ public class PController implements UltrasonicController {
       this.distance = distance;
     }
 
-    int diff = distance - bandCenter;
+    int diff = distance - bandCenter - 5;
     int deltaSpeed = 0;
 
     if (diff > bandWidth) { // Robot is too far from wall
