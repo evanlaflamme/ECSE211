@@ -50,8 +50,10 @@ public class Odometer extends Thread {
       double deltaD = 0.5 * (distanceLeft + distanceRight); //Vehicle displacement
       double deltaT = (distanceLeft - distanceRight) / OdometryLab.TRACK; //Change in heading
       
-      double deltaX = deltaD * Math.sin(getTheta()); //X component
-      double deltaY = deltaD * Math.cos(getTheta()); //Y component
+      double deltaX = deltaD * Math.sin((getTheta() * Math.PI) / 180); //X component (convert theta to radians)
+      double deltaY = deltaD * Math.cos((getTheta() * Math.PI) / 180); //Y component (convert theta to radians)
+      
+      deltaT = (deltaT * 180)/Math.PI; //Convert from radians to degrees
 
       synchronized (lock) {
         /**
@@ -59,7 +61,8 @@ public class Odometer extends Thread {
          * and theta in this block. Do not perform complex math
          * 
          */
-        setTheta(getTheta() + deltaT); //Update heading
+        
+        setTheta(((getTheta() + deltaT) % 360 + 360) % 360); //Update heading (mod 360 to ensure it is always between 0 and 360)
         setX(getX() + deltaX); //Update estimates
         setY(getY() + deltaY);
       }

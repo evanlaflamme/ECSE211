@@ -14,7 +14,7 @@ public class OdometryCorrection extends Thread {
   private Odometer odometer;
   private SampleProvider cAmbient;
   
-  private float lastIntensityLevel = 0;
+  private float lastIntensityLevel = 1;
 
   // constructor
   public OdometryCorrection(Odometer odometer) {
@@ -35,8 +35,21 @@ public class OdometryCorrection extends Thread {
       float[] cData = new float[cAmbient.sampleSize()];
       cAmbient.fetchSample(cData, 0);
       
+      System.out.println("Acquired sensor data");
+      System.out.println(cData);
+      
       if (cData[0] < lastIntensityLevel) { //Less intense than last check, so over band
+        System.out.println("Passed over line!");
         
+        double[] position = new double[3];
+        
+        odometer.getPosition(position, new boolean[] {true, true, true});
+        
+        for (int i = 0; i < position.length; i++) {
+          position[i] = 0;
+        }
+        
+        odometer.setPosition(position , new boolean[] {true, true, true});
       }
 
       // this ensure the odometry correction occurs only once every period
