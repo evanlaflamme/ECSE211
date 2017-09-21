@@ -8,11 +8,12 @@ import lejos.hardware.port.Port;
 import lejos.hardware.sensor.EV3ColorSensor;
 import lejos.hardware.sensor.SensorModes;
 import lejos.robotics.SampleProvider;
+import lejos.robotics.filter.MedianFilter;
 
 public class OdometryCorrection extends Thread {
   private static final long CORRECTION_PERIOD = 10;
   private Odometer odometer;
-  private SampleProvider cAmbient;
+  private SampleProvider cFilter;
   
   private float lastIntensityLevel = 1;
 
@@ -22,7 +23,8 @@ public class OdometryCorrection extends Thread {
     
     Port cPort = LocalEV3.get().getPort("S1");
     SensorModes cSensor = new EV3ColorSensor(cPort);
-    cAmbient = cSensor.getMode(3); //Ambient mode to get light intensity
+    SampleProvider cAmbient = cSensor.getMode(3); //Ambient mode to get light intensity
+    cFilter = new MedianFilter(cAmbient, 30);
   }
 
   // run method (required for Thread)
@@ -32,15 +34,10 @@ public class OdometryCorrection extends Thread {
     while (true) {
       correctionStart = System.currentTimeMillis();
 
-      float[] cData = new float[cAmbient.sampleSize()];
-      cAmbient.fetchSample(cData, 0);
+      float[] cData = new float[cFilter.sampleSize()];
+      cFilter.fetchSample(cData, 0);
       
-      System.out.println("Acquired sensor data");
-      System.out.println(cData);
-      
-      if (cData[0] < lastIntensityLevel) { //Less intense than last check, so over band
-        System.out.println("Passed over line!");
-        
+      if (cData[0] < lastIntensityLevel) { //Less intense than last check, so over band        
         double[] position = new double[3];
         
         odometer.getPosition(position, new boolean[] {true, true, true});
@@ -51,6 +48,8 @@ public class OdometryCorrection extends Thread {
         
         odometer.setPosition(position , new boolean[] {true, true, true});
       }
+      
+      lastIntensityLevel = cData[0];
 
       // this ensure the odometry correction occurs only once every period
       correctionEnd = System.currentTimeMillis();
