@@ -3,6 +3,10 @@
  */
 package ca.mcgill.ecse211.lab2;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+
 import lejos.hardware.Sound;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.port.Port;
@@ -15,12 +19,15 @@ import lejos.robotics.filter.MeanFilter;
 
 
 public class OdometryCorrection extends Thread {
-  private static final long CORRECTION_PERIOD = 10;
+  private static final long CORRECTION_PERIOD = 5;
   private Odometer odometer;
   private EV3ColorSensor cSensor;
   private SampleProvider cFilter;
   
-  private float lastIntensityLevel = 1;
+  private static final int SAMPLE_SIZE = 10;
+  private ArrayList<Integer> samples = new ArrayList<Integer>();
+  
+  private int lastBeepCounter = 0;
 
   // constructor
   public OdometryCorrection(Odometer odometer) {
@@ -29,7 +36,10 @@ public class OdometryCorrection extends Thread {
     Port cPort = LocalEV3.get().getPort("S1");
     cSensor = new EV3ColorSensor(cPort);
     SampleProvider cAmbient = cSensor.getMode(1); //Ambient mode to get light intensity
-    cFilter = new MedianFilter(cAmbient, 15);
+    //cFilter = new MedianFilter(cAmbient, 15);
+    cFilter = cAmbient;
+    
+    cSensor.setFloodlight(Color.WHITE);
   }
 
   // run method (required for Thread)
@@ -39,27 +49,35 @@ public class OdometryCorrection extends Thread {
     while (true) {
       correctionStart = System.currentTimeMillis();
       
-      cSensor.setFloodlight(Color.WHITE);
-
-      float[] cData = new float[cFilter.sampleSize()];
+	  float[] cData = new float[cFilter.sampleSize()];
       cFilter.fetchSample(cData, 0);
       
-      if (cData[0] < lastIntensityLevel - 0.02) { //Less intense than last check, so over band        
-       double[] position = new double[3];
-        
-        odometer.getPosition(position, new boolean[] {true, true, true});
-        
-        for (int i = 0; i < position.length; i++) {
-    	  position[i] = 0;
-        }
-        
-        odometer.setPosition(position , new boolean[] {true, true, true});
-        
-        Sound.setVolume(100);
-        Sound.beep();
-      }
+      samples.add((int) (cData[0] * 100));
       
-      lastIntensityLevel = cData[0];
+      int[] convSamples = new int[SAMPLE_SIZE];
+      
+      if (samples.size() == SAMPLE_SIZE + 1) {
+    	  samples.remove(0); //Remove first (oldest sample)
+    	  
+    	  if (lastBeepCounter == 0) {
+        	  Integer[] samplesArray = samples.toArray(new Integer[samples.size()]);
+        	  
+        	  //convSamples = conv1d(samplesArray, new float[] {-0.25F, 0.5F, 0.25F});
+        	  convSamples = derivative(samplesArray);
+        	  
+        	  if (rateOfChange(Arrays.copyOfRange(convSamples, SAMPLE_SIZE - 4, SAMPLE_SIZE - 1)) > 1.0) {
+        		  //Line
+        	        Sound.setVolume(70);
+        	        Sound.beep();
+        	        System.out.println("Beep");
+        	        
+        	        lastBeepCounter = 10;
+        	  }
+    	  } else {
+        	  lastBeepCounter--;
+          }
+      }       
+      
 
       // this ensure the odometry correction occurs only once every period
       correctionEnd = System.currentTimeMillis();
@@ -73,5 +91,63 @@ public class OdometryCorrection extends Thread {
         }
       }
     }
+  }
+  
+  private float rateOfChange(int[] arr) {
+	  return (arr[arr.length - 1] - arr[0]) / arr.length;
+  }
+  
+  private int maxOfArray(int[] arr) {
+	  int max = 0;
+	  
+	  for (int i = 0; i < arr.length; i++) {
+		  if (arr[i] > max) {
+			  max = arr[i];
+		  }
+	  }
+	  
+	  return max;
+  }
+  
+  private int minOfArray(int[] arr) {
+	  int min = 100;
+	  
+	  for (int i = 0; i < arr.length; i++) {
+		  if (arr[i] < min) {
+			  min = arr[i];
+		  }
+	  }
+	  
+	  return min;
+  }
+  
+  private int[] derivative(Integer[] samples) {
+	  int[] deriv = new int[samples.length];
+	  
+	  for (int i = 0; i < samples.length; i++) {
+		  if (i == samples.length - 1) {
+			  deriv[i] = 0;
+		  } else {
+			  deriv[i] = samples[i + 1] - samples[i];
+		  }
+	  }
+	  
+	  return deriv;
+  }
+  
+  private int[] conv1d(Integer[] samples, float[] window) {
+	  int[] convSum = new int[samples.length];
+	  
+	  for (int i = 0; i < samples.length; i++) {
+		  convSum[i] = 0;
+		  
+		  for (int j = 0; j < window.length; j++) {
+			  if (i - j > 0) {
+				  convSum[i] += (int)(samples[i - j] * window[j]);
+			  }			  
+		  }
+	  }
+	  
+	  return convSum;
   }
 }
