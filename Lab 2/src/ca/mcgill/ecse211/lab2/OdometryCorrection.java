@@ -33,6 +33,8 @@ public class OdometryCorrection extends Thread {
   
   private double previousX = 0;
   private double previousY = 0;
+  private double previousT = 0;
+  
   private double offsetX = 0;
   private double offsetY = 0;
 
@@ -71,41 +73,49 @@ public class OdometryCorrection extends Thread {
         	  
         	  derivSamples = derivative(samplesArray);
         	  
-        	  if (rateOfChange(Arrays.copyOfRange(derivSamples, SAMPLE_SIZE - 4, SAMPLE_SIZE - 1)) > 2.7F) {
+        	  if (rateOfChange(Arrays.copyOfRange(derivSamples, SAMPLE_SIZE - 4, SAMPLE_SIZE - 1)) > 2.9F) {
         	    double[] position = new double[3];
         	    
         	    odometer.getPosition(position, new boolean[] {true, true, true});
         	    
         	    double theta = thetaCloseTo(position[2]);
         	    
-        	    if (previousY == 0 && theta == 0) { //First line crosses
-        	      previousY = position[0];
-        	      offsetY = position[0];
-        	    } else if (previousX == 0 && theta == 90) { //First line on horizontal path
-        	      previousX = position[0];
-        	      previousY += (SQUARE_LENGTH - offsetY);        	      
-        	      offsetY = position[0];
-        	    } else if (theta == 0 && previousY != 0) {
-        	      previousY += SQUARE_LENGTH;
-        	    } else if (theta == 90) {
-        	      previousX += SQUARE_LENGTH;
-        	    } else if (theta == 180) {
-        	      previousY -= SQUARE_LENGTH;
-        	    } else if (theta == 270 && previousX > SQUARE_LENGTH + offsetX) {
-        	      previousX -= SQUARE_LENGTH;
-        	      previousY = 0;        	      
-        	    } else {
-        	      previousX = 0;
+        	    if (previousY == 0 && theta == 0) { //First line cross
+        	    	previousY = position[1];
+        	    	offsetY = position[1];
+        	    } else if (theta == 0) { //First vertical path
+        	    	previousY += SQUARE_LENGTH;
+        	    } else if (previousT == 0 && theta == 90) { //First turn
+        	    	previousX = position[0];
+        	    	offsetX = position[0];
+        	    	
+        	    	previousY += (SQUARE_LENGTH - offsetY);
+        	    } else if (theta == 90) { //First horizontal path
+        	    	previousX += SQUARE_LENGTH;
+        	    } else if (previousT == 90 && theta == 180) { //Turn
+        	    	previousX += (SQUARE_LENGTH - offsetX);
+        	    	
+        	    	previousY -= (SQUARE_LENGTH - offsetY);
+        	    } else if (theta == 180) { //Second vertical path
+        	    	previousY -= SQUARE_LENGTH;
+        	    } else if (previousT == 180 && theta == 270) {
+        	    	previousX -= (SQUARE_LENGTH - offsetX);
+        	    	
+        	    	previousY -= offsetY;
+        	    } else if (theta == 270) {
+        	    	previousX -= SQUARE_LENGTH;
         	    }
         	    
         	    position[0] = previousX;
         	    position[1] = previousY;
         	    
-        	    System.out.println("Corrected X: " + position[0] + "    Corrected Y: " + position[1]);
+        	    previousT = theta;
         	    
-        	    odometer.setPosition(position, new boolean[] {true, true, true});
+        	    //System.out.println("Corrected X: " + position[0] + "    Corrected Y: " + position[1] + "    Theta: " + theta);
         	    
-        	    Sound.setVolume(10);
+        	    odometer.setPosition(position, new boolean[] {true, true, false});
+        	    
+        	    Sound.setVolume(30);
         	    Sound.beep();
         	    
         	    lastBeepCounter = 10;
@@ -133,11 +143,11 @@ public class OdometryCorrection extends Thread {
   private double thetaCloseTo(double theta) { //Returns the closest "perfect" angle to theta
     int error = 5;
     
-    if (theta <= 90 - error || theta >= 90 + error) {
+    if (theta >= 90 - error && theta <= 90 + error) {
       return 90;
-    } else if (theta <= 180 - error || theta >= 180 + error) {
+    } else if (theta >= 180 - error && theta <= 180 + error) {
       return 180;
-    } else if (theta <= 270 - error || theta >= 270 + error) {
+    } else if (theta >= 270 - error && theta <= 270 + error) {
       return 270;
     } else {
       return 0;
