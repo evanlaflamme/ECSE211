@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import lejos.hardware.Sound;
+import lejos.hardware.Sounds;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.port.Port;
 import lejos.hardware.sensor.EV3ColorSensor;
@@ -24,10 +25,16 @@ public class OdometryCorrection extends Thread {
   private EV3ColorSensor cSensor;
   private SampleProvider cFilter;
   
+  private static final double SQUARE_LENGTH = 30.48;
   private static final int SAMPLE_SIZE = 10;
-  private ArrayList<Integer> samples = new ArrayList<Integer>();
+  private ArrayList<Integer> samples = new ArrayList<Integer>(); //Array that holds previous samples in order to compare data
   
-  private int lastBeepCounter = 0;
+  private int lastBeepCounter = 0; //Holds the counter that counts iterations since last beep
+  
+  private double previousX = 0;
+  private double previousY = 0;
+  private double offsetX = 0;
+  private double offsetY = 0;
 
   // constructor
   public OdometryCorrection(Odometer odometer) {
@@ -38,8 +45,6 @@ public class OdometryCorrection extends Thread {
     SampleProvider cAmbient = cSensor.getMode(1); //Ambient mode to get light intensity
     //cFilter = new MedianFilter(cAmbient, 15);
     cFilter = cAmbient;
-    
-    cSensor.setFloodlight(Color.WHITE);
   }
 
   // run method (required for Thread)
@@ -49,29 +54,61 @@ public class OdometryCorrection extends Thread {
     while (true) {
       correctionStart = System.currentTimeMillis();
       
+      cSensor.setFloodlight(Color.WHITE); //Set floodlight color to white to try and help with black line detection
+      
 	  float[] cData = new float[cFilter.sampleSize()];
       cFilter.fetchSample(cData, 0);
       
-      samples.add((int) (cData[0] * 100));
+      samples.add((int) (cData[0] * 100)); //Add newest sample to sample array (as integer)
       
-      int[] convSamples = new int[SAMPLE_SIZE];
+      int[] derivSamples = new int[SAMPLE_SIZE]; //Holds the derivative of samples
       
-      if (samples.size() == SAMPLE_SIZE + 1) {
-    	  samples.remove(0); //Remove first (oldest sample)
+      if (samples.size() == SAMPLE_SIZE + 1) { //Ignore sample set if not full (only affects first few seconds)
+    	  samples.remove(0); //Remove oldest sample from set
     	  
-    	  if (lastBeepCounter == 0) {
+    	  if (lastBeepCounter == 0) { //Only do correction if last beep was 10 iterations away
         	  Integer[] samplesArray = samples.toArray(new Integer[samples.size()]);
         	  
-        	  //convSamples = conv1d(samplesArray, new float[] {-0.25F, 0.5F, 0.25F});
-        	  convSamples = derivative(samplesArray);
+        	  derivSamples = derivative(samplesArray);
         	  
-        	  if (rateOfChange(Arrays.copyOfRange(convSamples, SAMPLE_SIZE - 4, SAMPLE_SIZE - 1)) > 1.0) {
-        		  //Line
-        	        Sound.setVolume(70);
-        	        Sound.beep();
-        	        System.out.println("Beep");
-        	        
-        	        lastBeepCounter = 10;
+        	  if (rateOfChange(Arrays.copyOfRange(derivSamples, SAMPLE_SIZE - 4, SAMPLE_SIZE - 1)) > 2.7F) {
+        	    double[] position = new double[3];
+        	    
+        	    odometer.getPosition(position, new boolean[] {true, true, true});
+        	    
+        	    double theta = thetaCloseTo(position[2]);
+        	    
+        	    if (previousY == 0 && theta == 0) { //First line crosses
+        	      previousY = position[0];
+        	      offsetY = position[0];
+        	    } else if (previousX == 0 && theta == 90) { //First line on horizontal path
+        	      previousX = position[0];
+        	      previousY += (SQUARE_LENGTH - offsetY);        	      
+        	      offsetY = position[0];
+        	    } else if (theta == 0 && previousY != 0) {
+        	      previousY += SQUARE_LENGTH;
+        	    } else if (theta == 90) {
+        	      previousX += SQUARE_LENGTH;
+        	    } else if (theta == 180) {
+        	      previousY -= SQUARE_LENGTH;
+        	    } else if (theta == 270 && previousX > SQUARE_LENGTH + offsetX) {
+        	      previousX -= SQUARE_LENGTH;
+        	      previousY = 0;        	      
+        	    } else {
+        	      previousX = 0;
+        	    }
+        	    
+        	    position[0] = previousX;
+        	    position[1] = previousY;
+        	    
+        	    System.out.println("Corrected X: " + position[0] + "    Corrected Y: " + position[1]);
+        	    
+        	    odometer.setPosition(position, new boolean[] {true, true, true});
+        	    
+        	    Sound.setVolume(10);
+        	    Sound.beep();
+        	    
+        	    lastBeepCounter = 10;
         	  }
     	  } else {
         	  lastBeepCounter--;
@@ -93,32 +130,22 @@ public class OdometryCorrection extends Thread {
     }
   }
   
+  private double thetaCloseTo(double theta) { //Returns the closest "perfect" angle to theta
+    int error = 5;
+    
+    if (theta <= 90 - error || theta >= 90 + error) {
+      return 90;
+    } else if (theta <= 180 - error || theta >= 180 + error) {
+      return 180;
+    } else if (theta <= 270 - error || theta >= 270 + error) {
+      return 270;
+    } else {
+      return 0;
+    }
+  }
+  
   private float rateOfChange(int[] arr) {
 	  return (arr[arr.length - 1] - arr[0]) / arr.length;
-  }
-  
-  private int maxOfArray(int[] arr) {
-	  int max = 0;
-	  
-	  for (int i = 0; i < arr.length; i++) {
-		  if (arr[i] > max) {
-			  max = arr[i];
-		  }
-	  }
-	  
-	  return max;
-  }
-  
-  private int minOfArray(int[] arr) {
-	  int min = 100;
-	  
-	  for (int i = 0; i < arr.length; i++) {
-		  if (arr[i] < min) {
-			  min = arr[i];
-		  }
-	  }
-	  
-	  return min;
   }
   
   private int[] derivative(Integer[] samples) {
@@ -133,21 +160,5 @@ public class OdometryCorrection extends Thread {
 	  }
 	  
 	  return deriv;
-  }
-  
-  private int[] conv1d(Integer[] samples, float[] window) {
-	  int[] convSum = new int[samples.length];
-	  
-	  for (int i = 0; i < samples.length; i++) {
-		  convSum[i] = 0;
-		  
-		  for (int j = 0; j < window.length; j++) {
-			  if (i - j > 0) {
-				  convSum[i] += (int)(samples[i - j] * window[j]);
-			  }			  
-		  }
-	  }
-	  
-	  return convSum;
   }
 }
