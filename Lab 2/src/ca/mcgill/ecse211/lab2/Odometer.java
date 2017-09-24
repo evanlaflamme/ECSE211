@@ -2,7 +2,7 @@ package ca.mcgill.ecse211.lab2;
 
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 
-public class Odometer extends Thread {  
+public class Odometer extends Thread {
   // robot position
   private double x;
   private double y;
@@ -12,9 +12,9 @@ public class Odometer extends Thread {
   private EV3LargeRegulatedMotor leftMotor;
   private EV3LargeRegulatedMotor rightMotor;
 
-  private static final long ODOMETER_PERIOD = 25; /*odometer update period, in ms*/
+  private static final long ODOMETER_PERIOD = 25; /* odometer update period, in ms */
 
-  private Object lock; /*lock object for mutual exclusion*/
+  private Object lock; /* lock object for mutual exclusion */
 
   // default constructor
   public Odometer(EV3LargeRegulatedMotor leftMotor, EV3LargeRegulatedMotor rightMotor) {
@@ -34,26 +34,30 @@ public class Odometer extends Thread {
 
     while (true) {
       updateStart = System.currentTimeMillis();
-      
-      //Get current tacho counts
+
+      // Get current tacho counts
       int nowLeftMotorTachoCount = leftMotor.getTachoCount();
       int nowRightMotorTachoCount = rightMotor.getTachoCount();
-      
-      //Get wheel displacements
-      double distanceLeft = Math.PI * OdometryLab.WHEEL_RADIUS * (nowLeftMotorTachoCount - getLeftMotorTachoCount()) / 180;
-      double distanceRight = Math.PI * OdometryLab.WHEEL_RADIUS * (nowRightMotorTachoCount - getRightMotorTachoCount()) / 180;
-      
-      //Save new tacho counts
+
+      // Get wheel displacements
+      double distanceLeft = Math.PI * OdometryLab.WHEEL_RADIUS
+          * (nowLeftMotorTachoCount - getLeftMotorTachoCount()) / 180;
+      double distanceRight = Math.PI * OdometryLab.WHEEL_RADIUS
+          * (nowRightMotorTachoCount - getRightMotorTachoCount()) / 180;
+
+      // Save new tacho counts
       setLeftMotorTachoCount(nowLeftMotorTachoCount);
       setRightMotorTachoCount(nowRightMotorTachoCount);
-      
-      double deltaD = 0.5 * (distanceLeft + distanceRight); //Vehicle displacement
-      double deltaT = (distanceLeft - distanceRight) / OdometryLab.TRACK; //Change in heading
-      
-      double deltaX = deltaD * Math.sin((getTheta() * Math.PI) / 180); //X component (convert theta to radians)
-      double deltaY = deltaD * Math.cos((getTheta() * Math.PI) / 180); //Y component (convert theta to radians)
-      
-      deltaT = (deltaT * 180)/Math.PI; //Convert from radians to degrees
+
+      double deltaD = 0.5 * (distanceLeft + distanceRight); // Vehicle displacement
+      double deltaT = (distanceLeft - distanceRight) / OdometryLab.TRACK; // Change in heading
+
+      double deltaX = deltaD * Math.sin((getTheta() * Math.PI) / 180); // X component (convert theta
+                                                                       // to radians)
+      double deltaY = deltaD * Math.cos((getTheta() * Math.PI) / 180); // Y component (convert theta
+                                                                       // to radians)
+
+      deltaT = (deltaT * 180) / Math.PI; // Convert from radians to degrees
 
       synchronized (lock) {
         /**
@@ -61,9 +65,10 @@ public class Odometer extends Thread {
          * and theta in this block. Do not perform complex math
          * 
          */
-        
-        setTheta(((getTheta() + deltaT) % 360 + 360) % 360); //Update heading (mod 360 to ensure it is always between 0 and 360)
-        setX(getX() + deltaX); //Update estimates
+
+        setTheta(((getTheta() + deltaT) % 360 + 360) % 360); // Update heading (mod 360 to ensure it
+                                                             // is always between 0 and 360)
+        setX(getX() + deltaX); // Update estimates
         setY(getY() + deltaY);
       }
 
