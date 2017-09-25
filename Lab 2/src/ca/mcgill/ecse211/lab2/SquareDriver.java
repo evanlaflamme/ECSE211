@@ -6,7 +6,7 @@ package ca.mcgill.ecse211.lab2;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 
 public class SquareDriver {
-  private static final int FORWARD_SPEED = 200;
+  private static final int FORWARD_SPEED = 190;
   private static final int ROTATE_SPEED = 150;
 
   public static void drive(EV3LargeRegulatedMotor leftMotor, EV3LargeRegulatedMotor rightMotor,

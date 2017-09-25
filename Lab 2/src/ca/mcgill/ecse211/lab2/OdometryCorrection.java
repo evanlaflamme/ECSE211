@@ -5,6 +5,7 @@ package ca.mcgill.ecse211.lab2;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import lejos.hardware.Sound;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.port.Port;
 import lejos.hardware.sensor.EV3ColorSensor;
@@ -16,7 +17,7 @@ public class OdometryCorrection extends Thread {
   private static final long CORRECTION_PERIOD = 5;
   private Odometer odometer;
   private EV3ColorSensor cSensor;
-  private SampleProvider cFilter;
+  private SampleProvider cAmbient;
 
   private static final double SQUARE_LENGTH = 30.48;
   private static final int SAMPLE_SIZE = 10;
@@ -38,9 +39,7 @@ public class OdometryCorrection extends Thread {
 
     Port cPort = LocalEV3.get().getPort("S1");
     cSensor = new EV3ColorSensor(cPort);
-    SampleProvider cAmbient = cSensor.getMode(1); // Ambient mode to get light intensity
-    // cFilter = new MedianFilter(cAmbient, 15);
-    cFilter = cAmbient;
+    cAmbient = cSensor.getMode(1); // Ambient mode to get light intensity
   }
 
   // run method (required for Thread)
@@ -53,8 +52,8 @@ public class OdometryCorrection extends Thread {
       cSensor.setFloodlight(Color.WHITE); // Set floodlight color to white to try and help with
                                           // black line detection
 
-      float[] cData = new float[cFilter.sampleSize()];
-      cFilter.fetchSample(cData, 0);
+      float[] cData = new float[cAmbient.sampleSize()];
+      cAmbient.fetchSample(cData, 0);
 
       samples.add((int) (cData[0] * 100)); // Add newest sample to sample array (as integer)
 
@@ -71,7 +70,7 @@ public class OdometryCorrection extends Thread {
 
           // If rate of change of last 5 samples is above threshold, then over line
           if (rateOfChange(
-              Arrays.copyOfRange(derivSamples, SAMPLE_SIZE - 4, SAMPLE_SIZE - 1)) > 2.8F) {
+              Arrays.copyOfRange(derivSamples, SAMPLE_SIZE - 4, SAMPLE_SIZE - 1)) > 2.90F) {
             double[] position = new double[3];
 
             odometer.getPosition(position, new boolean[] {true, true, true}); // Get odometer
@@ -79,22 +78,25 @@ public class OdometryCorrection extends Thread {
 
             double theta = getThetaEstimate(position[2]); // Get square theta
 
-            if (previousY == 0 && theta == 0) { // First line cross, set initial y position and y
-                                                // offset
-              previousY = position[1];
+            if (offsetY == 0 && theta == 0) { // First line cross, set initial y position and y
+                                                   // offset
+              previousY = 0;
               offsetY = position[1];
+              
+              position[1] = previousY; //Set updated position
             } else if (theta == 0) { // Along first vertical path, add square length to y
               previousY += SQUARE_LENGTH;
               
               position[1] = previousY; //Set updated position
             } else if (previousT == 0 && theta == 90) { // First line after first turn, set initial
                                                         // x and x offset, and add offset to Y
-              previousX = position[0];
+              previousX = 0;
               offsetX = position[0];
 
               previousY += (SQUARE_LENGTH - offsetY);
               
-              position[1] = previousY; //Set updated position
+              position[0] = previousX; // Set updated positions
+              position[1] = previousY;
             } else if (theta == 90) { // Along first horizontal path, add square length to x
               previousX += SQUARE_LENGTH;
               
@@ -129,6 +131,9 @@ public class OdometryCorrection extends Thread {
             previousT = theta; // Store last theta
 
             odometer.setPosition(position, new boolean[] {true, true, false}); // Update positions
+            
+            Sound.setVolume(30);
+            Sound.beep();
 
             lastBeepCounter = 10; // Reset beep counter
           }
