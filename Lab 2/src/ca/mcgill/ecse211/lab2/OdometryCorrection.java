@@ -5,7 +5,6 @@ package ca.mcgill.ecse211.lab2;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import lejos.hardware.Sound;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.port.Port;
 import lejos.hardware.sensor.EV3ColorSensor;
@@ -72,7 +71,7 @@ public class OdometryCorrection extends Thread {
 
           // If rate of change of last 5 samples is above threshold, then over line
           if (rateOfChange(
-              Arrays.copyOfRange(derivSamples, SAMPLE_SIZE - 4, SAMPLE_SIZE - 1)) > 2.9F) {
+              Arrays.copyOfRange(derivSamples, SAMPLE_SIZE - 4, SAMPLE_SIZE - 1)) > 2.8F) {
             double[] position = new double[3];
 
             odometer.getPosition(position, new boolean[] {true, true, true}); // Get odometer
@@ -86,40 +85,50 @@ public class OdometryCorrection extends Thread {
               offsetY = position[1];
             } else if (theta == 0) { // Along first vertical path, add square length to y
               previousY += SQUARE_LENGTH;
+              
+              position[1] = previousY; //Set updated position
             } else if (previousT == 0 && theta == 90) { // First line after first turn, set initial
                                                         // x and x offset, and add offset to Y
               previousX = position[0];
               offsetX = position[0];
 
               previousY += (SQUARE_LENGTH - offsetY);
+              
+              position[1] = previousY; //Set updated position
             } else if (theta == 90) { // Along first horizontal path, add square length to x
               previousX += SQUARE_LENGTH;
+              
+              position[0] = previousX; // Set updated position
             } else if (previousT == 90 && theta == 180) { // First line after second turn, add
                                                           // offset to x and subtract offset from y
               previousX += (SQUARE_LENGTH - offsetX);
 
               previousY -= (SQUARE_LENGTH - offsetY);
+              
+              position[0] = previousX; // Set updated positions
+              position[1] = previousY;
             } else if (theta == 180) { // Second vertical path, subtract square length from y (going
                                        // toward zero)
               previousY -= SQUARE_LENGTH;
+              
+              position[1] = previousY; //Set updated position
             } else if (previousT == 180 && theta == 270) { // First line after third turn, subtract
                                                            // offsets from x and y
               previousX -= (SQUARE_LENGTH - offsetX);
 
               previousY -= offsetY;
+              
+              position[0] = previousX; // Set updated positions
+              position[1] = previousY;
             } else if (theta == 270) { // Last few lines, subtract square lengths from x
               previousX -= SQUARE_LENGTH;
+              
+              position[0] = previousX; // Set updated position
             }
-
-            position[0] = previousX; // Set updated positions
-            position[1] = previousY;
 
             previousT = theta; // Store last theta
 
             odometer.setPosition(position, new boolean[] {true, true, false}); // Update positions
-
-            Sound.setVolume(30);
-            Sound.beep(); // Beep to indicate line crossing
 
             lastBeepCounter = 10; // Reset beep counter
           }

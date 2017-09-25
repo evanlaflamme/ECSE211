@@ -6,8 +6,6 @@ import lejos.hardware.Button;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.lcd.TextLCD;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
-import lejos.hardware.port.MotorPort;
-import lejos.hardware.port.Port;
 
 public class OdometryLab {
 
@@ -18,7 +16,7 @@ public class OdometryLab {
       new EV3LargeRegulatedMotor(LocalEV3.get().getPort("D"));
 
   public static final double WHEEL_RADIUS = 2.2;
-  public static final double TRACK = 16.9; //TODO: Tweak value
+  public static final double TRACK = 16.3;
 
   public static void main(String[] args) {
     int buttonChoice;
