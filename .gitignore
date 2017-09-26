@@ -35,3 +35,6 @@ local.properties
 .recommenders
 .classpath
 .project
+
+# other files
+.pdf
