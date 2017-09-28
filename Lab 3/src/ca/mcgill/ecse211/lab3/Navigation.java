@@ -23,18 +23,27 @@ public class Navigation {
   void travelTo(double x, double y) {
     navigating = true;
     
-    x = x * NavigationLab.SQUARE_LENGTH;
+    x = x * NavigationLab.SQUARE_LENGTH; //Convert to odometer coordinates
     y = y * NavigationLab.SQUARE_LENGTH;
     
     double currentX = odometer.getX();
     double currentY = odometer.getY();
     double currentTheta = odometer.getTheta();
     
-    double angle = (Math.atan2(x - currentX, y - currentY) * Math.PI) / 180;
-    angle = ((angle) % 360 + 360) % 360; //Must be within 0 and 360
+    double angle = Math.atan2(x - currentX, y - currentY); //Get angle between points
+    angle = angle * 180 / Math.PI; //Convert to degree
+    angle = positiveModulus(angle, 360); //Must be within 0 and 360
     
-    if (currentTheta != angle) {
-      turnTo(angle);
+    if (currentTheta != angle) { //Ensure that the angle is the minimum
+      double turnTheta = angle - currentTheta;
+      
+      if (turnTheta <= -180 && turnTheta >= -359) {
+        turnTheta += 360;
+      } else if (turnTheta >= 180 && turnTheta <= 359) {
+        turnTheta -= 360;
+      }
+      
+      turnTo(turnTheta);
     }
     
     double distance = Math.sqrt(Math.pow(y - currentY, 2) + Math.pow(x - currentX, 2));
@@ -51,7 +60,7 @@ public class Navigation {
     
     double currentTheta = odometer.getTheta();
     
-    double turnTheta = ((currentTheta - theta) % 360 + 360) % 360; //Turn theta must be within 0 and 360
+    double turnTheta = positiveModulus(currentTheta - theta, 360); //Turn theta must be within 0 and 360
     
     leftMotor.setSpeed(ROTATE_SPEED);
     rightMotor.setSpeed(ROTATE_SPEED);
@@ -70,5 +79,9 @@ public class Navigation {
 
   private static int convertAngle(double radius, double width, double angle) {
     return convertDistance(radius, Math.PI * width * angle / 360.0);
+  }
+  
+  private double positiveModulus(double num, int val) {
+    return ((num) % val + val) % val;
   }
 }
