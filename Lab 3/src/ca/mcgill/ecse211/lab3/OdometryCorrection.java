@@ -19,12 +19,14 @@ public class OdometryCorrection extends Thread {
   private static final long CORRECTION_PERIOD = 5;
   private Odometer odometer;
   private EV3ColorSensor cSensor;
-  private SampleProvider cAmbient;
+  private SampleProvider cFiltered;
 
-  private static final double SQUARE_LENGTH = 30.48;
   private static final int SAMPLE_SIZE = 10;
   private ArrayList<Integer> samples = new ArrayList<Integer>(); // Array that holds previous
                                                                  // samples in order to compare data
+  
+  private static final int UPPER_THRESHOLD = 6;
+  private static final int LOWER_THRESHOLD = -6;
 
   private int lastBeepCounter = 0; // Holds the counter that counts iterations since last beep
 
@@ -41,8 +43,8 @@ public class OdometryCorrection extends Thread {
 
     Port cPort = LocalEV3.get().getPort("S1");
     cSensor = new EV3ColorSensor(cPort);
-    SampleProvider cUnfiltered = cSensor.getMode(1); // Ambient mode to get light intensity
-    cAmbient = new MedianFilter(cUnfiltered, 10); //Use median filter to remove noise
+    SampleProvider cAmbient = cSensor.getMode(1); // Ambient mode to get light intensity
+    cFiltered = new MedianFilter(cAmbient, 5); //Use median filter to remove noise
   }
 
   // run method (required for Thread)
@@ -52,14 +54,8 @@ public class OdometryCorrection extends Thread {
     while (true) {
       correctionStart = System.currentTimeMillis();
 
-      float[] cData = new float[cAmbient.sampleSize()];
-      cAmbient.fetchSample(cData, 0);
-      
-      TextLCD t = LocalEV3.get().getTextLCD();
-      t.drawString("Light Level: " + cData[0], 0, 3);
-      
-      double temp = cData[0];
-      System.out.println(temp);
+      float[] cData = new float[cFiltered.sampleSize()];
+      cFiltered.fetchSample(cData, 0);
 
       samples.add((int) (cData[0] * 100)); // Add newest sample to sample array (as integer)
 
@@ -74,9 +70,7 @@ public class OdometryCorrection extends Thread {
 
           derivSamples = derivative(samplesArray);
 
-          // If rate of change of last 5 samples is above threshold, then over line
-          if (rateOfChange(
-              Arrays.copyOfRange(derivSamples, SAMPLE_SIZE - 4, SAMPLE_SIZE - 1)) > 0.4F) {
+          if (max(derivSamples) > UPPER_THRESHOLD && min(derivSamples) < LOWER_THRESHOLD) {
             double[] position = new double[3];
 
             odometer.getPosition(position, new boolean[] {true, true, true}); // Get odometer
@@ -91,7 +85,7 @@ public class OdometryCorrection extends Thread {
               
               position[1] = previousY; //Set updated position
             } else if (theta == 0) { // Along first vertical path, add square length to y
-              previousY += SQUARE_LENGTH;
+              previousY += NavigationLab.SQUARE_LENGTH;
               
               position[1] = previousY; //Set updated position
             } else if (previousT == 0 && theta == 90) { // First line after first turn, set initial
@@ -99,37 +93,37 @@ public class OdometryCorrection extends Thread {
               previousX = 0;
               offsetX = position[0];
 
-              previousY += (SQUARE_LENGTH - offsetY);
+              previousY += (NavigationLab.SQUARE_LENGTH - offsetY);
               
               position[0] = previousX; // Set updated positions
               position[1] = previousY;
             } else if (theta == 90) { // Along first horizontal path, add square length to x
-              previousX += SQUARE_LENGTH;
+              previousX += NavigationLab.SQUARE_LENGTH;
               
               position[0] = previousX; // Set updated position
             } else if (previousT == 90 && theta == 180) { // First line after second turn, add
                                                           // offset to x and subtract offset from y
-              previousX += (SQUARE_LENGTH - offsetX);
+              previousX += (NavigationLab.SQUARE_LENGTH - offsetX);
 
-              previousY -= (SQUARE_LENGTH - offsetY);
+              previousY -= (NavigationLab.SQUARE_LENGTH - offsetY);
               
               position[0] = previousX; // Set updated positions
               position[1] = previousY;
             } else if (theta == 180) { // Second vertical path, subtract square length from y (going
                                        // toward zero)
-              previousY -= SQUARE_LENGTH;
+              previousY -= NavigationLab.SQUARE_LENGTH;
               
               position[1] = previousY; //Set updated position
             } else if (previousT == 180 && theta == 270) { // First line after third turn, subtract
                                                            // offsets from x and y
-              previousX -= (SQUARE_LENGTH - offsetX);
+              previousX -= (NavigationLab.SQUARE_LENGTH - offsetX);
 
               previousY -= offsetY;
               
               position[0] = previousX; // Set updated positions
               position[1] = previousY;
             } else if (theta == 270) { // Last few lines, subtract square lengths from x
-              previousX -= SQUARE_LENGTH;
+              previousX -= NavigationLab.SQUARE_LENGTH;
               
               position[0] = previousX; // Set updated position
             }
@@ -178,8 +172,28 @@ public class OdometryCorrection extends Thread {
     }
   }
 
-  private float rateOfChange(int[] arr) { // Returns the rate of change of the array
-    return (arr[arr.length - 1] - arr[0]) / arr.length;
+  private int max(int[] arr) {
+    int max = -255;
+    
+    for (int i = 0; i < arr.length; i++) {
+      if (arr[i] > max) {
+        max = arr[i];
+      }
+    }
+    
+    return max;
+  }
+  
+  private int min(int[] arr) {
+    int min = 255;
+    
+    for (int i = 0; i < arr.length; i++) {
+      if (arr[i] < min) {
+        min = arr[i];
+      }
+    }
+    
+    return min;
   }
 
   private int[] derivative(Integer[] samples) { // Returns the discrete derivative of the array
