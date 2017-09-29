@@ -14,6 +14,8 @@ import lejos.robotics.SampleProvider;
 import lejos.robotics.filter.MedianFilter;
 
 public class NavigationLab {
+  
+  private static boolean objectDetected = false;
 
   private static final EV3LargeRegulatedMotor leftMotor =
       new EV3LargeRegulatedMotor(LocalEV3.get().getPort("A"));
@@ -30,15 +32,25 @@ public class NavigationLab {
 
   public static final double WHEEL_RADIUS = 2.2;
   public static final double TRACK = 15.9;
-  public static final double SQUARE_LENGTH = 30.48; 
+  public static final double SQUARE_LENGTH = 30.7; 
+  
+  private static final int DISTANCE_THRESHOLD = 15;
+  
+  private synchronized static void setObjectDetection(boolean b) {
+    objectDetected = b;
+  }
+  
+  private synchronized static boolean getObjectDetection() {
+    return objectDetected;
+  }
 
-  public static void main(String[] args) {
+  public static void main(String[] args) {    
     //Map 1
-    points.add(new int[] {0, 2});
+    /*points.add(new int[] {0, 2}); (-7, -2.4); (4.4, -2.1)(2.3, 0.1)
     points.add(new int[] {1, 1});
     points.add(new int[] {2, 2});
     points.add(new int[] {2, 1});
-    points.add(new int[] {1, 0});
+    points.add(new int[] {1, 0});*/
     
     //Map 2
     /*points.add(new int[] {1, 1});
@@ -61,17 +73,15 @@ public class NavigationLab {
     points.add(new int[] {2, 1});
     points.add(new int[] {2, 2});*/
     
-    @SuppressWarnings("resource")
-    SensorModes usSensor = new EV3UltrasonicSensor(usPort);
-    SampleProvider usDistance = usSensor.getMode("Distance");
-    SampleProvider usFiltered = new MedianFilter(usDistance, 20);
-    float[] usData = new float[usFiltered.sampleSize()];
-    UltrasonicPoller usPoller = new UltrasonicPoller(usFiltered, usData);
+    //Test Map
+    points.add(new int[] {2, 1});
+    points.add(new int[] {1, 1});
+    points.add(new int[] {1, 2});
+    points.add(new int[] {2, 0});
 
     final TextLCD t = LocalEV3.get().getTextLCD();
     odometer = new Odometer(leftMotor, rightMotor);
     OdometryDisplay odometryDisplay = new OdometryDisplay(odometer, t);
-    OdometryCorrection odometryCorrection = new OdometryCorrection(odometer);
     
     // clear the display
     t.clear();
@@ -81,39 +91,68 @@ public class NavigationLab {
     
     odometer.start();
     odometryDisplay.start();
-
-    odometryCorrection.start();      
     
-    usPoller.start();
+    Thread pollingThread = (new Thread() {
+      public void run() {
+        @SuppressWarnings("resource")
+        SensorModes usSensor = new EV3UltrasonicSensor(usPort);
+        SampleProvider usDistance = usSensor.getMode("Distance");
+        SampleProvider usFiltered = new MedianFilter(usDistance, 5);
+        float[] usData = new float[usFiltered.sampleSize()];
+        
+        int distance;
+        
+        while (true) {
+          usFiltered.fetchSample(usData, 0); // acquire data
+          distance = (int) (usData[0] * 100.0); // extract from buffer, cast to int
+          
+          t.drawString("Distance: " + distance, 0, 3);
+          
+          if (distance < DISTANCE_THRESHOLD && distance != 0) { //Ignore zero readings
+            setObjectDetection(true);
+          }
+          
+          try {
+            Thread.sleep(50);
+          } catch (Exception e) {
+          } // Poor man's timed sampling
+        }
+      }
+    });
+    pollingThread.start();
     
-    Thread navigationThread = null;
+    try { //Wait 5 seconds
+      Thread.sleep(5000);
+    } catch (Exception e) {
+    }
   
-    while (pointsIndex < points.size()) {      
-      navigationThread = (new Thread() {
+    while (pointsIndex < points.size()) {
+      Thread navigationThread = (new Thread() {
         public void run() {
           Navigation n = new Navigation(odometer, leftMotor, rightMotor);
           n.travelTo(points.get(pointsIndex)[0], points.get(pointsIndex)[1]);
+          
+          while (n.isNavigating()) { //While robot is moving
+            if (getObjectDetection()) { //If detect obstacle
+              leftMotor.stop(); //Stop motors
+              rightMotor.stop();
+              
+              n.avoidObject(); //Do avoidance
+              setObjectDetection(false);
+              return; //Leave thread
+            }
+          }
+          
+          pointsIndex++;
         }
       });
       navigationThread.start();
       
-      /*n.travelTo(points.get(pointsIndex)[0], points.get(pointsIndex)[1]);
-      pointsIndex++;*/
-      
-      while (navigationThread.getState() != Thread.State.TERMINATED) {  //TODO: FIX THIS
-        //Check for objects...
-        int one = 0;
-        
-        if (one == 1) { //Object detection
-          leftMotor.stop(); //Set speed to zero to stop motors
-          rightMotor.stop();
-          navigationThread.interrupt();
-          System.out.println("Stopping drive thread");
-          
-          pointsIndex--;
-        }
+      try {
+        navigationThread.join(); //Wait for thread to finish
+      } catch (InterruptedException e) {
+        //Should never be interrupted
       }
-      System.out.println("At point");
     }
     System.exit(0);
   }
