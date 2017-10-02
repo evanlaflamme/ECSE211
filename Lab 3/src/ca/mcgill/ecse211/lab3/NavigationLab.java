@@ -30,11 +30,11 @@ public class NavigationLab {
   private static ArrayList<int[]> points = new ArrayList<int[]>(); // Array to hold the points
   private static int pointsIndex = 0; // Holds the current index in the array
 
-  public static final double WHEEL_RADIUS = 2.2;
-  public static final double TRACK = 15.9;
-  public static final double SQUARE_LENGTH = 30.7;
+  public static final double WHEEL_RADIUS = 2.07;
+  public static final double TRACK = 15.5;
+  public static final double SQUARE_LENGTH = 30.48;
 
-  private static final int DISTANCE_THRESHOLD = 10;
+  private static final int DISTANCE_THRESHOLD = 10; // Distance from the object for detection
 
   // Bounds of the board
   private static final double MAX_X = 3 * NavigationLab.SQUARE_LENGTH;
@@ -54,11 +54,12 @@ public class NavigationLab {
 
   public static void main(String[] args) {
     // Map 1
-    /*
-     * points.add(new int[] {0, 2}); points.add(new int[] {1, 1}); points.add(new int[] {2, 2});
-     * points.add(new int[] {2, 1}); points.add(new int[] {1, 0});
-     */
-
+     //points.add(new int[] {0, 2}); 
+     //points.add(new int[] {1, 1}); 
+     //points.add(new int[] {2, 2});
+     //points.add(new int[] {2, 1}); 
+     //points.add(new int[] {1, 0});
+     
     // Map 2
     /*
      * points.add(new int[] {1, 1}); points.add(new int[] {0, 2}); points.add(new int[] {2, 2});
@@ -66,29 +67,19 @@ public class NavigationLab {
      */
 
     // Map 3
-    /*
-     * points.add(new int[] {1, 0}); points.add(new int[] {2, 1}); points.add(new int[] {2, 2});
-     * points.add(new int[] {0, 2}); points.add(new int[] {1, 1});
-     */
+    
+     points.add(new int[] {1, 0}); 
+     points.add(new int[] {2, 1}); 
+     points.add(new int[] {2, 2});
+     points.add(new int[] {0, 2}); 
+     points.add(new int[] {1, 1});
+     
 
     // Map 4
     /*
      * points.add(new int[] {0, 1}); points.add(new int[] {1, 2}); points.add(new int[] {1, 0});
      * points.add(new int[] {2, 1}); points.add(new int[] {2, 2});
      */
-
-    // Test Map
-    /*
-     * points.add(new int[] {2, 1}); points.add(new int[] {1, 1}); points.add(new int[] {1, 2});
-     * points.add(new int[] {2, 0});
-     */
-
-    // Test Map 2
-    points.add(new int[] {0, 2});
-    points.add(new int[] {1, 1});
-    points.add(new int[] {2, 2});
-    points.add(new int[] {2, 0});
-    points.add(new int[] {1, 1});
 
     final TextLCD t = LocalEV3.get().getTextLCD();
     odometer = new Odometer(leftMotor, rightMotor);
@@ -160,8 +151,8 @@ public class NavigationLab {
         private boolean detectObject(Navigation n) {
           while (n.isNavigating()) { // While robot is moving
             if (getObjectDetection()) { // If detect obstacle
-              leftMotor.setSpeed(0); // Stop motors
-              rightMotor.setSpeed(0);
+              leftMotor.stop(); // Stop motors
+              rightMotor.stop();
 
               return true;
             }
@@ -173,7 +164,7 @@ public class NavigationLab {
         // Performs avoidance
         private void avoidObject(Navigation n) {
           double distance = NavigationLab.SQUARE_LENGTH; // The distance to travel
-          double avoidanceOffset = (NavigationLab.TRACK / 2) * 1.2; // Distance between center of
+          double avoidanceOffset = NavigationLab.TRACK * 4; // Distance between center of
                                                                     // rotation and end of robot
 
           double currentX = odometer.getX(); // Get current odometer values

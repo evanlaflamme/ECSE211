@@ -16,6 +16,9 @@ public class Navigation {
     this.odometer = odometer;
     this.leftMotor = leftMotor;
     this.rightMotor = rightMotor;
+    
+    leftMotor.setAcceleration(2000);
+    rightMotor.setAcceleration(2000);
   }
 
   // Travels to specified x and y from current position
@@ -53,6 +56,8 @@ public class Navigation {
       theta += 360;
     } else if (theta >= 180 && theta <= 359) {
       theta -= 360;
+    } else if (theta >= 360 || theta <= -360) {
+      theta = theta % 360;
     }
 
     leftMotor.setSpeed(ROTATE_SPEED);
@@ -77,8 +82,8 @@ public class Navigation {
   void avoidObject_2(int direction, double distance) {
     turnTo(-90 * direction);
 
-    leftMotor.rotate(convertDistance(NavigationLab.WHEEL_RADIUS, distance * 1.5), true);
-    rightMotor.rotate(convertDistance(NavigationLab.WHEEL_RADIUS, distance * 1.5), true);
+    leftMotor.rotate(convertDistance(NavigationLab.WHEEL_RADIUS, distance * 1.55), true);
+    rightMotor.rotate(convertDistance(NavigationLab.WHEEL_RADIUS, distance * 1.55), true);
   }
 
   // Third and last step of avoidance
@@ -86,8 +91,8 @@ public class Navigation {
   void avoidObject_3(int direction, double distance) {
     turnTo(-90 * direction);
 
-    leftMotor.rotate(convertDistance(NavigationLab.WHEEL_RADIUS, distance), true);
-    rightMotor.rotate(convertDistance(NavigationLab.WHEEL_RADIUS, distance), true);
+    leftMotor.rotate(convertDistance(NavigationLab.WHEEL_RADIUS, distance * 0.5), true);
+    rightMotor.rotate(convertDistance(NavigationLab.WHEEL_RADIUS, distance * 0.5), true);
   }
 
   // Returns true if the robot is moving
