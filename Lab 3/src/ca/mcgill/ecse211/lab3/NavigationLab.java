@@ -31,11 +31,10 @@ public class NavigationLab {
   private static int pointsIndex = 0; // Holds the current index in the array
 
   public static final double WHEEL_RADIUS = 2.07;
-  public static final double TRACK = 15.1;
+  public static final double TRACK = 15.5;
   public static final double SQUARE_LENGTH = 30.48;
-  public static int sensordistance = 0;
 
-  private static final int DISTANCE_THRESHOLD = 12; // Distance from the object for detection
+  private static final int DISTANCE_THRESHOLD = 10; // Distance from the object for detection
 
   // Bounds of the board
   private static final double MAX_X = 3 * NavigationLab.SQUARE_LENGTH;
@@ -55,12 +54,11 @@ public class NavigationLab {
 
   public static void main(String[] args) {
     // Map 1
-     /*points.add(new int[] {0, 2}); 
-     points.add(new int[] {1, 1}); 
-     points.add(new int[] {2, 2});
-     points.add(new int[] {2, 1}); 
-     points.add(new int[] {1, 0});
-     */
+     //points.add(new int[] {0, 2}); 
+     //points.add(new int[] {1, 1}); 
+     //points.add(new int[] {2, 2});
+     //points.add(new int[] {2, 1}); 
+     //points.add(new int[] {1, 0});
      
     // Map 2
     /*
@@ -75,7 +73,6 @@ public class NavigationLab {
      points.add(new int[] {2, 2});
      points.add(new int[] {0, 2}); 
      points.add(new int[] {1, 1});
-	 
      
 
     // Map 4
@@ -107,14 +104,15 @@ public class NavigationLab {
         SampleProvider usFiltered = new MedianFilter(usDistance, 5);
         float[] usData = new float[usFiltered.sampleSize()];
 
+        int distance;
 
         while (true) {
           usFiltered.fetchSample(usData, 0); // acquire data
-          sensordistance = (int) (usData[0]*100); // extract from buffer, cast to int
+          distance = (int) (usData[0] * 100.0); // extract from buffer, cast to int
 
-          t.drawString("Distance: " + sensordistance, 0, 3); // Show distane on the screen
+          t.drawString("Distance: " + distance, 0, 3); // Show distane on the screen
 
-          if (sensordistance < DISTANCE_THRESHOLD && sensordistance != 0) { // If object detected ignoring zero
+          if (distance < DISTANCE_THRESHOLD && distance != 0) { // If object detected ignoring zero
                                                                 // readings
             setObjectDetection(true); // Set object detected to true
           }
@@ -153,8 +151,8 @@ public class NavigationLab {
         private boolean detectObject(Navigation n) {
           while (n.isNavigating()) { // While robot is moving
             if (getObjectDetection()) { // If detect obstacle
-              leftMotor.setSpeed(0); // Stop motors
-              rightMotor.setSpeed(0);
+              leftMotor.stop(); // Stop motors
+              rightMotor.stop();
 
               return true;
             }
@@ -166,7 +164,7 @@ public class NavigationLab {
         // Performs avoidance
         private void avoidObject(Navigation n) {
           double distance = NavigationLab.SQUARE_LENGTH; // The distance to travel
-          double avoidanceOffset = NavigationLab.TRACK * 1.7; // Distance between center of
+          double avoidanceOffset = NavigationLab.TRACK * 4; // Distance between center of
                                                                     // rotation and end of robot
 
           double currentX = odometer.getX(); // Get current odometer values
@@ -187,16 +185,14 @@ public class NavigationLab {
 
           if (currentX + rightXComponent + avoidanceOffset < MAX_X
               && currentX + rightXComponent - avoidanceOffset > MIN_X
-              && currentY + leftYComponent + avoidanceOffset < MAX_Y
-              && currentY + leftYComponent - avoidanceOffset > MIN_Y
               && currentY + rightYComponent + avoidanceOffset < MAX_Y
               && currentY + rightYComponent - avoidanceOffset > MIN_Y) { // If possible to turn
                                                                          // right
             direction = 1;
           } else if (currentX + leftXComponent + avoidanceOffset < MAX_X
               && currentX + leftXComponent - avoidanceOffset > MIN_X
-              && currentY + rightYComponent + avoidanceOffset < MAX_Y
-              && currentY + rightYComponent - avoidanceOffset > MIN_Y) { // If possible to turn left
+              && currentY + leftYComponent + avoidanceOffset < MAX_Y
+              && currentY + leftYComponent - avoidanceOffset > MIN_Y) { // If possible to turn left
             direction = -1;
           }
 

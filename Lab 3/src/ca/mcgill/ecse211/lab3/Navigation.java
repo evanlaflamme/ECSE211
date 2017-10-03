@@ -17,6 +17,8 @@ public class Navigation {
     this.leftMotor = leftMotor;
     this.rightMotor = rightMotor;
     
+    leftMotor.setAcceleration(2000);
+    rightMotor.setAcceleration(2000);
   }
 
   // Travels to specified x and y from current position
@@ -69,15 +71,10 @@ public class Navigation {
   // First step of avoidance
   // Travel distance 90 degrees from current position to avoid object
   void avoidObject_1(int direction, double distance) {
-	 // if(NavigationLab.sensordistance > distance){ // check if we need to avoid the obstacle
-		  turnTo(90 * direction);
+    turnTo(90 * direction);
 
-		  leftMotor.rotate(convertDistance(NavigationLab.WHEEL_RADIUS, distance), true);
-		  rightMotor.rotate(convertDistance(NavigationLab.WHEEL_RADIUS, distance), true);
-    
-		  leftMotor.setAcceleration(800);
-		  rightMotor.setAcceleration(800);
-	  //}
+    leftMotor.rotate(convertDistance(NavigationLab.WHEEL_RADIUS, distance), true);
+    rightMotor.rotate(convertDistance(NavigationLab.WHEEL_RADIUS, distance), true);
   }
 
   // Second step of avoidance
@@ -85,11 +82,8 @@ public class Navigation {
   void avoidObject_2(int direction, double distance) {
     turnTo(-90 * direction);
 
-    leftMotor.rotate(convertDistance(NavigationLab.WHEEL_RADIUS, distance * 1.40), true);
-    rightMotor.rotate(convertDistance(NavigationLab.WHEEL_RADIUS, distance * 1.40), true);
-    
-    leftMotor.setAcceleration(800);
-    rightMotor.setAcceleration(800);
+    leftMotor.rotate(convertDistance(NavigationLab.WHEEL_RADIUS, distance * 1.55), true);
+    rightMotor.rotate(convertDistance(NavigationLab.WHEEL_RADIUS, distance * 1.55), true);
   }
 
   // Third and last step of avoidance
@@ -99,9 +93,6 @@ public class Navigation {
 
     leftMotor.rotate(convertDistance(NavigationLab.WHEEL_RADIUS, distance * 0.5), true);
     rightMotor.rotate(convertDistance(NavigationLab.WHEEL_RADIUS, distance * 0.5), true);
-    
-    leftMotor.setAcceleration(800);
-    rightMotor.setAcceleration(800);
   }
 
   // Returns true if the robot is moving
