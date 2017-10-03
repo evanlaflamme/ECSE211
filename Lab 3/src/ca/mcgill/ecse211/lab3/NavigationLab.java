@@ -31,7 +31,7 @@ public class NavigationLab {
   private static int pointsIndex = 0; // Holds the current index in the array
 
   public static final double WHEEL_RADIUS = 2.07;
-  public static final double TRACK = 15.5;
+  public static final double TRACK = 15.1;
   public static final double SQUARE_LENGTH = 30.48;
 
   private static final int DISTANCE_THRESHOLD = 10; // Distance from the object for detection
@@ -54,32 +54,32 @@ public class NavigationLab {
 
   public static void main(String[] args) {
     // Map 1
-     //points.add(new int[] {0, 2}); 
-     //points.add(new int[] {1, 1}); 
-     //points.add(new int[] {2, 2});
-     //points.add(new int[] {2, 1}); 
-     //points.add(new int[] {1, 0});
-     
+    // points.add(new int[] {0, 2});
+    // points.add(new int[] {1, 1});
+    // points.add(new int[] {2, 2});
+    // points.add(new int[] {2, 1});
+    // points.add(new int[] {1, 0});
+
     // Map 2
-    /*
-     * points.add(new int[] {1, 1}); points.add(new int[] {0, 2}); points.add(new int[] {2, 2});
-     * points.add(new int[] {2, 1}); points.add(new int[] {1, 0});
-     */
+    points.add(new int[] {1, 1}); 
+    points.add(new int[] {0, 2}); 
+    points.add(new int[] {2, 2});
+    points.add(new int[] {2, 1}); 
+    points.add(new int[] {1, 0});
 
     // Map 3
-    
-     points.add(new int[] {1, 0}); 
-     points.add(new int[] {2, 1}); 
-     points.add(new int[] {2, 2});
-     points.add(new int[] {0, 2}); 
-     points.add(new int[] {1, 1});
-     
+    // points.add(new int[] {1, 0});
+    // points.add(new int[] {2, 1});
+    // points.add(new int[] {2, 2});
+    // points.add(new int[] {0, 2});
+    // points.add(new int[] {1, 1});
 
     // Map 4
-    /*
-     * points.add(new int[] {0, 1}); points.add(new int[] {1, 2}); points.add(new int[] {1, 0});
-     * points.add(new int[] {2, 1}); points.add(new int[] {2, 2});
-     */
+    // points.add(new int[] {0, 1}); 
+    // points.add(new int[] {1, 2}); 
+    // points.add(new int[] {1, 0});
+    // points.add(new int[] {2, 1}); 
+    // points.add(new int[] {2, 2});
 
     final TextLCD t = LocalEV3.get().getTextLCD();
     odometer = new Odometer(leftMotor, rightMotor);
@@ -109,8 +109,6 @@ public class NavigationLab {
         while (true) {
           usFiltered.fetchSample(usData, 0); // acquire data
           distance = (int) (usData[0] * 100.0); // extract from buffer, cast to int
-
-          t.drawString("Distance: " + distance, 0, 3); // Show distane on the screen
 
           if (distance < DISTANCE_THRESHOLD && distance != 0) { // If object detected ignoring zero
                                                                 // readings
@@ -151,8 +149,8 @@ public class NavigationLab {
         private boolean detectObject(Navigation n) {
           while (n.isNavigating()) { // While robot is moving
             if (getObjectDetection()) { // If detect obstacle
-              leftMotor.stop(); // Stop motors
-              rightMotor.stop();
+              leftMotor.setSpeed(0); // Stop motors
+              rightMotor.setSpeed(0);
 
               return true;
             }
@@ -164,8 +162,8 @@ public class NavigationLab {
         // Performs avoidance
         private void avoidObject(Navigation n) {
           double distance = NavigationLab.SQUARE_LENGTH; // The distance to travel
-          double avoidanceOffset = NavigationLab.TRACK * 4; // Distance between center of
-                                                                    // rotation and end of robot
+          double avoidanceOffset = NavigationLab.TRACK * 3; // Distance between center of
+                                                            // rotation and end of robot
 
           double currentX = odometer.getX(); // Get current odometer values
           double currentY = odometer.getY();
@@ -185,15 +183,17 @@ public class NavigationLab {
 
           if (currentX + rightXComponent + avoidanceOffset < MAX_X
               && currentX + rightXComponent - avoidanceOffset > MIN_X
-              && currentY + rightYComponent + avoidanceOffset < MAX_Y
-              && currentY + rightYComponent - avoidanceOffset > MIN_Y) { // If possible to turn
+              && currentY + leftYComponent + avoidanceOffset < MAX_Y
+              && currentY + leftYComponent - avoidanceOffset > MIN_Y) { // If possible to turn
                                                                          // right
             direction = 1;
           } else if (currentX + leftXComponent + avoidanceOffset < MAX_X
               && currentX + leftXComponent - avoidanceOffset > MIN_X
-              && currentY + leftYComponent + avoidanceOffset < MAX_Y
-              && currentY + leftYComponent - avoidanceOffset > MIN_Y) { // If possible to turn left
+              && currentY + rightYComponent + avoidanceOffset < MAX_Y
+              && currentY + rightYComponent - avoidanceOffset > MIN_Y) { // If possible to turn left
             direction = -1;
+          } else { // Otherwise, just go right
+            direction = 1;
           }
 
           n.avoidObject_1(direction, distance); // Perform first step of avoidance

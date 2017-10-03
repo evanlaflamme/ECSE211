@@ -16,9 +16,6 @@ public class Navigation {
     this.odometer = odometer;
     this.leftMotor = leftMotor;
     this.rightMotor = rightMotor;
-    
-    leftMotor.setAcceleration(2000);
-    rightMotor.setAcceleration(2000);
   }
 
   // Travels to specified x and y from current position
