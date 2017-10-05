@@ -59,6 +59,7 @@ public class LocalizationLab {
     @SuppressWarnings("resource")
     SensorModes usSensor = new EV3UltrasonicSensor(usPort);
     SampleProvider usDistance = usSensor.getMode("Distance");
+    SampleProvider usFiltered = new MedianFilter(usDistance, 10);
     float[] usData = new float[usDistance.sampleSize()];
     UltrasonicPoller usPoller = null;
     
@@ -86,24 +87,21 @@ public class LocalizationLab {
     } catch (Exception e) {
     }
     
+    Navigation navigation = new Navigation(odometer, leftMotor, rightMotor);
+    
     if (buttonChoice == Button.ID_LEFT) { //Rising edge
-      usLoc = new UltrasonicLocalizer(UltrasonicLocalizer.Method.RISING_EDGE);
+      usLoc = new UltrasonicLocalizer(UltrasonicLocalizer.Method.RISING_EDGE, navigation, odometer);
     } else { //Falling edge
-      usLoc = new UltrasonicLocalizer(UltrasonicLocalizer.Method.FALLING_EDGE);
+      usLoc = new UltrasonicLocalizer(UltrasonicLocalizer.Method.FALLING_EDGE, navigation, odometer);
     }
     
-    usPoller = new UltrasonicPoller(usDistance, usData, usLoc);
+    usPoller = new UltrasonicPoller(usFiltered, usData, usLoc);
 
-    usPoller.start();
+    //usPoller.start();
+    //usLoc.start();
     
-    Thread navigationThread = (new Thread() {
-      public void run() {
-        Navigation n = new Navigation(odometer, leftMotor, rightMotor);
-        
-        n.turnTo(360);
-      }
-    });
-    navigationThread.start();
+    LightLocalizer lightLocalizer = new LightLocalizer(odometer, navigation);
+    lightLocalizer.start();
     
     Button.waitForAnyPress();
     System.exit(0);
