@@ -20,11 +20,17 @@ public class LightLocalizer extends Thread {
   private ArrayList<Float> samples = new ArrayList<Float>(); // Array that holds previous
                                                                  // samples in order to compare data
   
-  private static final float UPPER_THRESHOLD = 1.5F;
-  private static final float LOWER_THRESHOLD = -1.5F;
+  private static final float UPPER_THRESHOLD = 1.7F;
+  private static final float LOWER_THRESHOLD = -1.7F;
+  private static final double DISTANCE_FROM_CENTER = 10;
 
   private int lastBeepCounter = 0; // Holds the counter that counts iterations since last beep
-
+  
+  double thetaX1;
+  double thetaX2;
+  double thetaY1;
+  double thetaY2;
+  
   // constructor
   public LightLocalizer(Odometer odometer, Navigation navigation) {
     this.odometer = odometer;
@@ -44,6 +50,8 @@ public class LightLocalizer extends Thread {
 
     while (navigation.isNavigating()) {
       correctionStart = System.currentTimeMillis();
+      
+      int numLinesDetected = 0;
 
       float[] cData = new float[cFiltered.sampleSize()];
       cFiltered.fetchSample(cData, 0);
@@ -62,11 +70,29 @@ public class LightLocalizer extends Thread {
           derivSamples = derivative(samplesArray);
 
           if (max(derivSamples) > UPPER_THRESHOLD && min(derivSamples) < LOWER_THRESHOLD) { //Line detected
-            
+			numLinesDetected++;
+              double currentTheta = odometer.getTheta();
+              
+              switch (numLinesDetected) {
+                case 1:
+                  thetaX1 = currentTheta;
+                  break;
+                case 2:
+                  thetaY1 = currentTheta;
+                  break;
+                case 3:
+                  thetaX2 = currentTheta;
+                  break;
+                case 4:
+                  thetaY2 = currentTheta;
+                  break;
+              }
+
+        	  
             Sound.setVolume(70);
             Sound.beep();
 
-            lastBeepCounter = 10; // Reset beep counter
+            lastBeepCounter = 5; // Reset beep counter
           }
         } else {
           lastBeepCounter--;
@@ -86,6 +112,19 @@ public class LightLocalizer extends Thread {
         }
       }
     }
+    
+    //double thetaX = ((thetaX2 - thetaX1) % 360 + 360) % 360;
+    //double thetaY = ((thetaY2 - thetaY1) % 360 + 360) % 360;
+    double thetaX = ((180 - thetaX1) % 360 + 360) % 360;
+    double thetaY = ((270 - thetaY1) % 360 + 360) % 360;
+    
+    double positionX = (-1 * DISTANCE_FROM_CENTER) * Math.cos(thetaY);
+    double positionY = (-1 * DISTANCE_FROM_CENTER) * Math.cos(thetaX);
+    
+    odometer.setX(positionX);
+    odometer.setY(positionY);
+    
+    navigation.travelTo(0, 0);
   }
 
   private double getThetaEstimate(double theta) { // Returns the closest "perfect" angle to theta

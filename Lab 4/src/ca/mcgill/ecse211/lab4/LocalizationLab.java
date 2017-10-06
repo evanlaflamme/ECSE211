@@ -97,11 +97,22 @@ public class LocalizationLab {
     
     usPoller = new UltrasonicPoller(usFiltered, usData, usLoc);
 
-    //usPoller.start();
-    //usLoc.start();
+    usPoller.start();
+    usLoc.start();
+/*    try{
+    	usLoc.join();
+    }catch (InterruptedException e){
+    }
+    */
+    Button.waitForAnyPress();
     
-    LightLocalizer lightLocalizer = new LightLocalizer(odometer, navigation);
-    lightLocalizer.start();
+    LightLocalizer lightlocalizer = new LightLocalizer(odometer, navigation);
+    lightlocalizer.start();
+    
+/*    try{
+    	lightlocalizer.join();
+    }catch (InterruptedException e){
+    }*/
     
     Button.waitForAnyPress();
     System.exit(0);
