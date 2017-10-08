@@ -3,11 +3,11 @@ package ca.mcgill.ecse211.lab4;
 import lejos.hardware.Sound;
 
 public class UltrasonicLocalizer extends Thread {
-  private int previousDistance = -1;
   private int distance = -1;
   
-  private static final int THRESHOLD = 50;
-  
+  private static final int RISING_THRESHOLD = 30;
+  private static final int FALLING_THRESHOLD = 60;
+
   public enum Method { RISING_EDGE, FALLING_EDGE };
   private Method method;
   
@@ -24,9 +24,9 @@ public class UltrasonicLocalizer extends Thread {
   }
   
   public void run() {
-	  navigation.turnTo(360, true);
+	  navigation.turnTo(360, true, false);
 	  
-	  while (previousDistance == -1) {
+	  while (distance == -1) {
 		  //Wait until we have data
 	  }
 	  
@@ -38,12 +38,11 @@ public class UltrasonicLocalizer extends Thread {
   }
   
   public void processUSData(int distance) {
-	  previousDistance = this.distance;
 	  this.distance = distance;
   }
   
   private void risingEdge() {
-	  while (distance < THRESHOLD) {
+	  while (distance < RISING_THRESHOLD) {
 		  //Wait until first rising edge
 	  }
 	  Sound.setVolume(70);
@@ -51,14 +50,14 @@ public class UltrasonicLocalizer extends Thread {
 	  navigation.stopMotors();
 	  theta1 = odometer.getTheta();
 	  
-	  navigation.turnTo(-360, true);
+	  navigation.turnTo(-360, true, false);
 	  
 	  try {
-	      Thread.sleep(3500);
+	      Thread.sleep(2000);
 	    } catch (Exception e) {
 	    }
 	  
-	  while (distance < THRESHOLD) {
+	  while (distance < RISING_THRESHOLD) {
 		  //Wait until second edge
 	  }
 	  Sound.beep();
@@ -69,7 +68,7 @@ public class UltrasonicLocalizer extends Thread {
   }
   
   private void fallingEdge() {
-	  while (distance > THRESHOLD) {
+	  while (distance > FALLING_THRESHOLD) {
 		  //Wait until first rising edge
 	  }
 	  Sound.setVolume(70);
@@ -77,14 +76,14 @@ public class UltrasonicLocalizer extends Thread {
 	  navigation.stopMotors();
 	  theta1 = odometer.getTheta();
 	  
-	  navigation.turnTo(-360, true);
+	  navigation.turnTo(-360, true, false);
 	  
 	  try {
 	      Thread.sleep(3500);
 	    } catch (Exception e) {
 	    }
 	  
-	  while (distance > THRESHOLD) {
+	  while (distance > FALLING_THRESHOLD) {
 		  //Wait until second edge
 	  }
 	  Sound.beep();
@@ -97,9 +96,6 @@ public class UltrasonicLocalizer extends Thread {
   private void correctHeading() {
 	  double correctionTheta = 0;
 	  
-	  theta1 = ((theta1 % 360) + 360) % 360;
-	  theta2 = ((theta2 % 360) + 360) % 360;
-	  
 	  if (method == Method.RISING_EDGE) {
 		  correctionTheta = 45 - ((theta1 + theta2) / 2);
 	  } else {
@@ -111,6 +107,6 @@ public class UltrasonicLocalizer extends Thread {
 	  
 	  odometer.setTheta(correctionTheta);
 	  
-	  navigation.turnTo(-correctionTheta, false);
+	  navigation.turnTo(-correctionTheta, false, true);
   }
 }

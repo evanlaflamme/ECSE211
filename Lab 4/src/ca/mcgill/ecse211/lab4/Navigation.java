@@ -33,7 +33,7 @@ public class Navigation {
     if (currentTheta != angle) {
       double turnTheta = angle - currentTheta;
 
-      turnTo(turnTheta, false); // Turn to new angle
+      turnTo(turnTheta, false, true); // Turn to new angle
     }
 
     double distance = Math.sqrt(Math.pow(y - currentY, 2) + Math.pow(x - currentX, 2)); // Distance
@@ -48,14 +48,25 @@ public class Navigation {
   }
 
   // Turns to theta relative to current angle
-  // 'r' designates if the method should return before completing or not
-  void turnTo(double theta, boolean r) {	  
+  // 'ret' designates if the method should return before completing or not
+  // 'small' designates whether the robot should take the shorter turn or not
+  void turnTo(double theta, boolean ret, boolean small) {
+    if (small) {
+      if (theta <= -180 && theta >= -359) { // Ensures that robot takes minimum angle
+        theta += 360;
+      } else if (theta >= 180 && theta <= 359) {
+        theta -= 360;
+      } else if (theta >= 360 || theta <= -360) {
+        theta = theta % 360;
+      }
+    }
+    
     leftMotor.setSpeed(ROTATE_SPEED);
     rightMotor.setSpeed(ROTATE_SPEED);
 
     // Rotate to new angle
     leftMotor.rotate(convertAngle(LocalizationLab.WHEEL_RADIUS, LocalizationLab.TRACK, theta), true);
-    rightMotor.rotate(-convertAngle(LocalizationLab.WHEEL_RADIUS, LocalizationLab.TRACK, theta), false || r);
+    rightMotor.rotate(-convertAngle(LocalizationLab.WHEEL_RADIUS, LocalizationLab.TRACK, theta), false || ret);
   }
   
   void stopMotors() {

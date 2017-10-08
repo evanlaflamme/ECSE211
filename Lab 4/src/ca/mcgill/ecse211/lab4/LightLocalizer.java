@@ -3,6 +3,7 @@ package ca.mcgill.ecse211.lab4;
 import java.util.ArrayList;
 import lejos.hardware.Sound;
 import lejos.hardware.ev3.LocalEV3;
+import lejos.hardware.lcd.TextLCD;
 import lejos.hardware.port.Port;
 import lejos.hardware.sensor.EV3ColorSensor;
 import lejos.robotics.SampleProvider;
@@ -20,16 +21,11 @@ public class LightLocalizer extends Thread {
   private ArrayList<Float> samples = new ArrayList<Float>(); // Array that holds previous
                                                                  // samples in order to compare data
   
-  private static final float UPPER_THRESHOLD = 1.7F;
-  private static final float LOWER_THRESHOLD = -1.7F;
-  private static final double DISTANCE_FROM_CENTER = 10;
+  private static final float UPPER_THRESHOLD = 1.2F;
+  private static final float LOWER_THRESHOLD = -1.2F;
+  private static final double DISTANCE_FROM_CENTER = 9.5;
 
   private int lastBeepCounter = 0; // Holds the counter that counts iterations since last beep
-  
-  double thetaX1;
-  double thetaX2;
-  double thetaY1;
-  double thetaY2;
   
   // constructor
   public LightLocalizer(Odometer odometer, Navigation navigation) {
@@ -45,8 +41,9 @@ public class LightLocalizer extends Thread {
   // run method (required for Thread)
   public void run() {
     long correctionStart, correctionEnd;
+    double thetaX1 = 0, thetaX2 = 0, thetaY1 = 0, thetaY2 = 0;
     
-    navigation.turnTo(360, true);
+    navigation.turnTo(360, true, false);
 
     while (navigation.isNavigating()) {
       correctionStart = System.currentTimeMillis();
@@ -70,7 +67,7 @@ public class LightLocalizer extends Thread {
           derivSamples = derivative(samplesArray);
 
           if (max(derivSamples) > UPPER_THRESHOLD && min(derivSamples) < LOWER_THRESHOLD) { //Line detected
-			numLinesDetected++;
+              numLinesDetected++;
               double currentTheta = odometer.getTheta();
               
               switch (numLinesDetected) {
@@ -113,33 +110,28 @@ public class LightLocalizer extends Thread {
       }
     }
     
-    //double thetaX = ((thetaX2 - thetaX1) % 360 + 360) % 360;
-    //double thetaY = ((thetaY2 - thetaY1) % 360 + 360) % 360;
-    double thetaX = ((180 - thetaX1) % 360 + 360) % 360;
-    double thetaY = ((270 - thetaY1) % 360 + 360) % 360;
+    double thetaX = (thetaX2 - thetaX1)/2;
+    double thetaY = (thetaY2 - thetaY1)/2;
+    //double thetaX = ((180 - thetaX1) % 360 + 360) % 360;
+    //double thetaY = ((270 - thetaY1) % 360 + 360) % 360;
     
-    double positionX = (-1 * DISTANCE_FROM_CENTER) * Math.cos(thetaY);
-    double positionY = (-1 * DISTANCE_FROM_CENTER) * Math.cos(thetaX);
+    double positionX = (-1 * DISTANCE_FROM_CENTER) * Math.abs(Math.cos(thetaY));
+    double positionY = (-1 * DISTANCE_FROM_CENTER) * Math.abs(Math.cos(thetaX));
+    
+    TextLCD t = LocalEV3.get().getTextLCD();
+    t.drawString("New X:          " + positionX, 0, 3);
+    t.drawString("New Y:          " + positionY, 0, 4);
     
     odometer.setX(positionX);
     odometer.setY(positionY);
     
     navigation.travelTo(0, 0);
-  }
-
-  private double getThetaEstimate(double theta) { // Returns the closest "perfect" angle to theta
-    int error = 5;
-
-    // Return if theta is close to "perfect" angle, within error
-    if (theta >= 90 - error && theta <= 90 + error) {
-      return 90;
-    } else if (theta >= 180 - error && theta <= 180 + error) {
-      return 180;
-    } else if (theta >= 270 - error && theta <= 270 + error) {
-      return 270;
-    } else {
-      return 0;
+    
+    while (navigation.isNavigating()) {
+      //Wait to get to point
     }
+    
+    navigation.turnTo(-odometer.getTheta(), true, true);
   }
 
   private float max(float[] arr) {
