@@ -60,18 +60,20 @@ public class Navigation {
         theta = theta % 360;
       }
     }
-    
+
     leftMotor.setSpeed(ROTATE_SPEED);
     rightMotor.setSpeed(ROTATE_SPEED);
 
     // Rotate to new angle
-    leftMotor.rotate(convertAngle(LocalizationLab.WHEEL_RADIUS, LocalizationLab.TRACK, theta), true);
-    rightMotor.rotate(-convertAngle(LocalizationLab.WHEEL_RADIUS, LocalizationLab.TRACK, theta), false || ret);
+    leftMotor.rotate(convertAngle(LocalizationLab.WHEEL_RADIUS, LocalizationLab.TRACK, theta),
+        true);
+    rightMotor.rotate(-convertAngle(LocalizationLab.WHEEL_RADIUS, LocalizationLab.TRACK, theta),
+        false || ret);
   }
-  
+
   void stopMotors() {
-	  leftMotor.setSpeed(0);
-	  rightMotor.setSpeed(0);
+    leftMotor.setSpeed(0);
+    rightMotor.setSpeed(0);
   }
 
   // Returns true if the robot is moving

@@ -19,14 +19,14 @@ public class LightLocalizer extends Thread {
 
   private static final int SAMPLE_SIZE = 10;
   private ArrayList<Float> samples = new ArrayList<Float>(); // Array that holds previous
-                                                                 // samples in order to compare data
-  
+                                                             // samples in order to compare data
+
   private static final float UPPER_THRESHOLD = 1.2F;
   private static final float LOWER_THRESHOLD = -1.2F;
   private static final double DISTANCE_FROM_CENTER = 9.5;
 
   private int lastBeepCounter = 0; // Holds the counter that counts iterations since last beep
-  
+
   // constructor
   public LightLocalizer(Odometer odometer, Navigation navigation) {
     this.odometer = odometer;
@@ -35,19 +35,20 @@ public class LightLocalizer extends Thread {
     Port cPort = LocalEV3.get().getPort("S1");
     cSensor = new EV3ColorSensor(cPort);
     SampleProvider cAmbient = cSensor.getMode(1); // Ambient mode to get light intensity
-    cFiltered = new MedianFilter(cAmbient, 5); //Use median filter to remove noise
+    cFiltered = new MedianFilter(cAmbient, 5); // Use median filter to remove noise
   }
 
   // run method (required for Thread)
   public void run() {
     long correctionStart, correctionEnd;
     double thetaX1 = 0, thetaX2 = 0, thetaY1 = 0, thetaY2 = 0;
-    
-    navigation.turnTo(360, true, false);
 
-    while (navigation.isNavigating()) {
+    navigation.turnTo(360, true, false); // Perform a full 360 degree turn, returning before
+                                         // completion
+
+    while (navigation.isNavigating()) { // While robot is turning
       correctionStart = System.currentTimeMillis();
-      
+
       int numLinesDetected = 0;
 
       float[] cData = new float[cFiltered.sampleSize()];
@@ -66,26 +67,27 @@ public class LightLocalizer extends Thread {
 
           derivSamples = derivative(samplesArray);
 
-          if (max(derivSamples) > UPPER_THRESHOLD && min(derivSamples) < LOWER_THRESHOLD) { //Line detected
-              numLinesDetected++;
-              double currentTheta = odometer.getTheta();
-              
-              switch (numLinesDetected) {
-                case 1:
-                  thetaX1 = currentTheta;
-                  break;
-                case 2:
-                  thetaY1 = currentTheta;
-                  break;
-                case 3:
-                  thetaX2 = currentTheta;
-                  break;
-                case 4:
-                  thetaY2 = currentTheta;
-                  break;
-              }
+          if (max(derivSamples) > UPPER_THRESHOLD && min(derivSamples) < LOWER_THRESHOLD) { // Line
+                                                                                            // detected
+            numLinesDetected++;
+            double currentTheta = odometer.getTheta();
 
-        	  
+            switch (numLinesDetected) { // Set theta depending on which line is detected
+              case 1:
+                thetaX1 = currentTheta;
+                break;
+              case 2:
+                thetaY1 = currentTheta;
+                break;
+              case 3:
+                thetaX2 = currentTheta;
+                break;
+              case 4:
+                thetaY2 = currentTheta;
+                break;
+            }
+
+
             Sound.setVolume(70);
             Sound.beep();
 
@@ -109,52 +111,49 @@ public class LightLocalizer extends Thread {
         }
       }
     }
-    
-    double thetaX = (thetaX2 - thetaX1)/2;
-    double thetaY = (thetaY2 - thetaY1)/2;
-    //double thetaX = ((180 - thetaX1) % 360 + 360) % 360;
-    //double thetaY = ((270 - thetaY1) % 360 + 360) % 360;
-    
+
+    // Calculate theta x and theta y once robot is done turning
+    double thetaX = (thetaX2 - thetaX1) / 2;
+    double thetaY = (thetaY2 - thetaY1) / 2;
+
+    // Calculate x and y positions
     double positionX = (-1 * DISTANCE_FROM_CENTER) * Math.abs(Math.cos(thetaY));
     double positionY = (-1 * DISTANCE_FROM_CENTER) * Math.abs(Math.cos(thetaX));
-    
-    TextLCD t = LocalEV3.get().getTextLCD();
-    t.drawString("New X:          " + positionX, 0, 3);
-    t.drawString("New Y:          " + positionY, 0, 4);
-    
+
+    // Set new positions
     odometer.setX(positionX);
     odometer.setY(positionY);
-    
-    navigation.travelTo(0, 0);
-    
+
+    navigation.travelTo(0, 0); // Travel to origin
+
     while (navigation.isNavigating()) {
-      //Wait to get to point
+      // Wait until robot is at the point
     }
-    
-    navigation.turnTo(-odometer.getTheta(), true, true);
+
+    navigation.turnTo(-odometer.getTheta(), true, true); // Turn to 0 degrees
   }
 
-  private float max(float[] arr) {
+  private float max(float[] arr) { // Returns the maximum value of an array
     float max = -255;
-    
+
     for (int i = 0; i < arr.length; i++) {
       if (arr[i] > max) {
         max = arr[i];
       }
     }
-    
+
     return max;
   }
-  
-  private float min(float[] arr) {
+
+  private float min(float[] arr) { // Returns the minimum value of an array
     float min = 255;
-    
+
     for (int i = 0; i < arr.length; i++) {
       if (arr[i] < min) {
         min = arr[i];
       }
     }
-    
+
     return min;
   }
 
