@@ -1,9 +1,7 @@
 package ca.mcgill.ecse211.lab4;
 
-import java.util.ArrayList;
 import lejos.hardware.Sound;
 import lejos.hardware.ev3.LocalEV3;
-import lejos.hardware.lcd.TextLCD;
 import lejos.hardware.port.Port;
 import lejos.hardware.sensor.EV3ColorSensor;
 import lejos.robotics.SampleProvider;
@@ -11,18 +9,14 @@ import lejos.robotics.filter.MedianFilter;
 
 
 public class LightLocalizer extends Thread {
-  private static final long CORRECTION_PERIOD = 5;
+  private static final long CORRECTION_PERIOD = 10;
   private Odometer odometer;
   private Navigation navigation;
   private EV3ColorSensor cSensor;
   private SampleProvider cFiltered;
 
-  private static final int SAMPLE_SIZE = 10;
-  private ArrayList<Float> samples = new ArrayList<Float>(); // Array that holds previous
-                                                             // samples in order to compare data
-
-  private static final float UPPER_THRESHOLD = 1.2F;
-  private static final float LOWER_THRESHOLD = -1.2F;
+  private static final int THRESHOLD = 25;
+  private static final int MIN_DATA_THRESHOLD = 5;
   private static final double DISTANCE_FROM_CENTER = 9.5;
 
   private int lastBeepCounter = 0; // Holds the counter that counts iterations since last beep
@@ -43,6 +37,39 @@ public class LightLocalizer extends Thread {
     long correctionStart, correctionEnd;
     double thetaX1 = 0, thetaX2 = 0, thetaY1 = 0, thetaY2 = 0;
 
+    navigation.travelTo(2, 2); // Travel toward origin
+
+    while (navigation.isNavigating()) { // While robot is turning
+      correctionStart = System.currentTimeMillis();
+
+      if (detectLine()) { // If line detected, stop moving
+        navigation.stopMotors();
+
+        Sound.setVolume(70);
+        Sound.beep();
+        break;
+      }
+
+      // this ensure the detection occurs only once every period
+      correctionEnd = System.currentTimeMillis();
+      if (correctionEnd - correctionStart < CORRECTION_PERIOD) {
+        try {
+          Thread.sleep(CORRECTION_PERIOD - (correctionEnd - correctionStart));
+        } catch (InterruptedException e) {
+        }
+      }
+    }
+
+    navigation.travelTo((odometer.getX() - DISTANCE_FROM_CENTER) / LocalizationLab.SQUARE_LENGTH,
+        (odometer.getY() - DISTANCE_FROM_CENTER) / LocalizationLab.SQUARE_LENGTH); // Return towards
+                                                                                   // origin
+
+    while (navigation.isNavigating()) {
+      // Wait until we are at the origin
+    }
+
+    navigation.turnTo(-odometer.getTheta(), false, true); // Turn back to 0 degrees
+
     navigation.turnTo(360, true, false); // Perform a full 360 degree turn, returning before
                                          // completion
 
@@ -51,63 +78,32 @@ public class LightLocalizer extends Thread {
 
       int numLinesDetected = 0;
 
-      float[] cData = new float[cFiltered.sampleSize()];
-      cFiltered.fetchSample(cData, 0);
+      if (detectLine()) { // If line detected
+        numLinesDetected++;
+        double currentTheta = odometer.getTheta();
 
-      samples.add((cData[0] * 100)); // Add newest sample to sample array (as integer)
-
-      float[] derivSamples = new float[SAMPLE_SIZE]; // Holds the derivative of samples
-
-      if (samples.size() == SAMPLE_SIZE + 1) { // Ignore sample set if not full (only affects first
-                                               // few milliseconds)
-        samples.remove(0); // Remove oldest sample from set
-
-        if (lastBeepCounter == 0) { // Only do correction if last beep was 10 iterations away
-          Float[] samplesArray = samples.toArray(new Float[samples.size()]);
-
-          derivSamples = derivative(samplesArray);
-
-          if (max(derivSamples) > UPPER_THRESHOLD && min(derivSamples) < LOWER_THRESHOLD) { // Line
-                                                                                            // detected
-            numLinesDetected++;
-            double currentTheta = odometer.getTheta();
-
-            switch (numLinesDetected) { // Set theta depending on which line is detected
-              case 1:
-                thetaX1 = currentTheta;
-                break;
-              case 2:
-                thetaY1 = currentTheta;
-                break;
-              case 3:
-                thetaX2 = currentTheta;
-                break;
-              case 4:
-                thetaY2 = currentTheta;
-                break;
-            }
-
-
-            Sound.setVolume(70);
-            Sound.beep();
-
-            lastBeepCounter = 5; // Reset beep counter
-          }
-        } else {
-          lastBeepCounter--;
+        switch (numLinesDetected) { // Set theta depending on which line is detected
+          case 1:
+            thetaX1 = currentTheta;
+            break;
+          case 2:
+            thetaY1 = currentTheta;
+            break;
+          case 3:
+            thetaX2 = currentTheta;
+            break;
+          case 4:
+            thetaY2 = currentTheta;
+            break;
         }
-      }
 
-
-      // this ensure the odometry correction occurs only once every period
-      correctionEnd = System.currentTimeMillis();
-      if (correctionEnd - correctionStart < CORRECTION_PERIOD) {
-        try {
-          Thread.sleep(CORRECTION_PERIOD - (correctionEnd - correctionStart));
-        } catch (InterruptedException e) {
-          // there is nothing to be done here because it is not
-          // expected that the odometry correction will be
-          // interrupted by another thread
+        // this ensure the detection occurs only once every period
+        correctionEnd = System.currentTimeMillis();
+        if (correctionEnd - correctionStart < CORRECTION_PERIOD) {
+          try {
+            Thread.sleep(CORRECTION_PERIOD - (correctionEnd - correctionStart));
+          } catch (InterruptedException e) {
+          }
         }
       }
     }
@@ -117,8 +113,8 @@ public class LightLocalizer extends Thread {
     double thetaY = (thetaY2 - thetaY1) / 2;
 
     // Calculate x and y positions
-    double positionX = (-1 * DISTANCE_FROM_CENTER) * Math.abs(Math.cos(thetaY));
-    double positionY = (-1 * DISTANCE_FROM_CENTER) * Math.abs(Math.cos(thetaX));
+    double positionX = Math.cos(thetaY);
+    double positionY = Math.cos(thetaX);
 
     // Set new positions
     odometer.setX(positionX);
@@ -133,41 +129,32 @@ public class LightLocalizer extends Thread {
     navigation.turnTo(-odometer.getTheta(), true, true); // Turn to 0 degrees
   }
 
-  private float max(float[] arr) { // Returns the maximum value of an array
-    float max = -255;
+  private boolean detectLine() { // Returns true if a line is detected
+    float[] cData = new float[cFiltered.sampleSize()];
+    cFiltered.fetchSample(cData, 0); // Get data from sensor
 
-    for (int i = 0; i < arr.length; i++) {
-      if (arr[i] > max) {
-        max = arr[i];
+    while ((cData[0] * 100) < MIN_DATA_THRESHOLD) { // Ensure that the sensor is getting usable data
+      try {
+        Thread.sleep(50);
+      } catch (InterruptedException e) {
       }
+
+      cFiltered.fetchSample(cData, 0);
     }
 
-    return max;
-  }
+    if (lastBeepCounter == 0) { // Ensures that last line detect was enough time ago
+      if ((cData[0] * 100) < THRESHOLD) { // If data is less than threshold, line detected
+        Sound.setVolume(70);
+        Sound.beep(); // Beep
 
-  private float min(float[] arr) { // Returns the minimum value of an array
-    float min = 255;
+        lastBeepCounter = 20; // Reset beep counter
 
-    for (int i = 0; i < arr.length; i++) {
-      if (arr[i] < min) {
-        min = arr[i];
+        return true;
       }
+    } else {
+      lastBeepCounter--; // Otherwise, lower the beep counter
     }
 
-    return min;
-  }
-
-  private float[] derivative(Float[] samples) { // Returns the discrete derivative of the array
-    float[] deriv = new float[samples.length];
-
-    for (int i = 0; i < samples.length; i++) {
-      if (i == samples.length - 1) { // If first derivative (does not exist), set it to zero
-        deriv[i] = 0;
-      } else { // Otherwise, set it as equation for discrete derivatives
-        deriv[i] = samples[i + 1] - samples[i];
-      }
-    }
-
-    return deriv;
+    return false;
   }
 }

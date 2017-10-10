@@ -80,12 +80,12 @@ public class LocalizationLab {
     } catch (Exception e) {
     }
 
-    usLoc.start();
+    usLoc.start(); //Start ultrasonic localizer
 
     Button.waitForAnyPress(); // Wait for button press before continuing to light localization
 
     LightLocalizer lightlocalizer = new LightLocalizer(odometer, navigation);
-    lightlocalizer.start();
+    lightlocalizer.start(); //Start light localizer
 
     Button.waitForAnyPress();
     System.exit(0);
